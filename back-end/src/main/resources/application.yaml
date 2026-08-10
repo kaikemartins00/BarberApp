@@ -19,11 +19,6 @@ spring:
     expiration: ${JWT_EXPIRATION:86400000}
     key: ${JWT_KEY}
 
-  admin:
-    email: ${ADMIN_EMAIL}
-    senha: ${ADMIN_SENHA}
-    nome: ${ADMIN_NOME}
-
   mail:
     host: smtp.gmail.com
     port: 587
@@ -37,3 +32,8 @@ spring:
           starttls:
             enable: true
             required: true
+
+admin:
+  email: ${ADMIN_EMAIL}
+  senha: ${ADMIN_SENHA}
+  nome: ${ADMIN_NOME}

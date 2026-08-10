@@ -45,4 +45,5 @@ public class AuthController {
     public void reenviarCodigo(@RequestParam String email) {
         service.reenviarCodigo(email);
     }
+
 }
