@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom'; 
 import api from '../api/api';
 
 function Login() {
@@ -6,6 +7,7 @@ function Login() {
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState('');
   const [carregando, setCarregando] = useState(false);
+  const navigate = useNavigate();
 
   async function handleLogin(event) {
     event.preventDefault(); 
@@ -17,7 +19,6 @@ function Login() {
       const token = response.data.token;
 
       console.log('Token recebido:', token);
-      alert('Login realizado com sucesso!');
 
     } catch (error) {
       setErro('Email ou senha inválidos');
@@ -57,6 +58,9 @@ function Login() {
           {carregando ? 'Entrando...' : 'Entrar'}
         </button>
       </form>
+      <p style={{ marginTop: '16px' }}>
+            Não tem conta? <Link to="/cadastro">Cadastrar</Link>
+      </p>
     </div>
   );
 }

@@ -63,7 +63,7 @@ public class AuthService {
             if (existente.get().isVerificado()) {
                 throw new BadRequestException("O email já existe.");
             }
-            // já existe mas não verificou ainda -> reenvia o código em vez de bloquear
+
             reenviarCodigo(dto.email());
             return;
         }
