@@ -37,3 +37,7 @@ admin:
   email: ${ADMIN_EMAIL}
   senha: ${ADMIN_SENHA}
   nome: ${ADMIN_NOME}
+
+gemini:
+  api_key: ${API_KEY}
+  url: ${URL_GEMINI}
