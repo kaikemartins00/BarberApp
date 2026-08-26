@@ -1,46 +1,45 @@
 package com.kaikeMartins.barberapp_backend.ai.client;
 
-import com.kaikeMartins.barberapp_backend.ai.dto.GeminiContent;
-import com.kaikeMartins.barberapp_backend.ai.dto.GeminiPart;
 import com.kaikeMartins.barberapp_backend.ai.dto.GeminiRequest;
 import com.kaikeMartins.barberapp_backend.ai.dto.GeminiResponse;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
-import java.util.List;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
+
 
 @Component
 public class GeminiClient {
 
-    private final RestClient restClient;
-    private final String apiKey;
+    private RestClient customClient;
 
-    public GeminiClient(@Value("${gemini.url}") String url,
-                        @Value("${gemini.api-key}") String apiKey) {
-        this.restClient = RestClient.create(url);
+    private String geminiUrl;
+
+    private String apiKey;
+
+    private String nome = "x-goog-api-key";
+
+
+    public GeminiClient(@Value("${gemini.api_key}") String apiKey, @Value("${gemini.url}") String geminiUrl) {
         this.apiKey = apiKey;
-    }
+        this.geminiUrl = geminiUrl;
 
-    public String enviarMensagem(String pergunta) {
+        customClient = RestClient.builder()
+                .baseUrl(geminiUrl)
+                .defaultHeader(nome, apiKey)
+                .build();
 
-        GeminiRequest request = new GeminiRequest(
-                List.of(
-                        new GeminiContent(
-                                List.of(
-                                        new GeminiPart(pergunta)
-                                )
-                        )
-                )
-        );
-
-        GeminiResponse response = restClient.post()
-                .uri(uriBuilder -> uriBuilder.queryParam("key", apiKey).build())
-                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
-                .body(request)
+        }
+    public ResponseEntity<GeminiResponse> getGeminiRequest(GeminiRequest geminiRequest) {
+        ResponseEntity<GeminiResponse> request = customClient.post()
+                .contentType(APPLICATION_JSON)
+                .body(geminiRequest)
                 .retrieve()
-                .body(GeminiResponse.class);
+                .toEntity(GeminiResponse.class);
 
-        return response.candidates().get(0).content().parts().get(0).text();
+        return request;
     }
+
 }
