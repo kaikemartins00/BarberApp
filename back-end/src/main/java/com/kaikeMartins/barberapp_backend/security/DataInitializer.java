@@ -52,6 +52,8 @@ public class DataInitializer implements CommandLineRunner {
         ClienteEntity admin = new ClienteEntity();
         admin.setNome(adminNome);
         admin.setEmail(adminEmail);
+        admin.setVerificado(true);
+        admin.setCodigoVerificacao("123456");
         admin.setSenha(passwordEncoder.encode(adminSenha));
 
         Set<RoleEntity> roles = new HashSet<>();

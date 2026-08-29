@@ -43,7 +43,7 @@ public class SecurityConfig {
                         }))
 
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers("/auth/**", "/gemini/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/barbeiros/**", "/servicos/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/barbeiros/**", "/servicos/**").hasAnyAuthority("ROLE_ADMIN")
                         .requestMatchers(HttpMethod.POST, "/agendamentos/**").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN", "ROLE_BARBEIRO")
