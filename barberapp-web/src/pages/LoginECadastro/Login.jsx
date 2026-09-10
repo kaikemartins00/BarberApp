@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom'; 
-import api from '../api/api';
+import api from '../../api/api.js';
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -9,13 +9,13 @@ function Login() {
   const [carregando, setCarregando] = useState(false);
   const navigate = useNavigate();
 
-  async function handleLogin(event) {
-    event.preventDefault(); 
-    setErro('');
-    setCarregando(true);
+  async function handleLogin(event) { // Função assíncrona para lidar com o envio do formulário de login
+    event.preventDefault(); // Impede o comportamento padrão do navegador de recarregar a página ao enviar o formulário
+    setErro(''); // Limpa qualquer mensagem de erro anterior
+    setCarregando(true); // Define o estado de carregamento como verdadeiro para indicar que a requisição está em andamento
 
     try {
-      const response = await api.post('/auth/login', { email, senha });
+      const response = await api.post('/auth/login', { email, senha }); 
       const token = response.data.token;
 
       console.log('Token recebido:', token);

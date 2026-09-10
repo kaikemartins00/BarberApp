@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useNavigate, Link } from 'react-router-dom'; 
-import api from '../api/api';
+import api from '../../api/api.js';
 
 function VerificarConta() {
   const [codigo, setCodigo] = useState('');

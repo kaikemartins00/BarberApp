@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+
 import java.time.Duration;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON;
@@ -27,7 +28,7 @@ public class GeminiClient {
         this.apiKey = apiKey;
         this.geminiUrl = geminiUrl;
 
-        Duration timeout = Duration.ofSeconds(30);
+        Duration timeout = Duration.ofSeconds(5);
 
         JdkClientHttpRequestFactory  jdkClientHttpRequestFactory = new JdkClientHttpRequestFactory();
         jdkClientHttpRequestFactory.setReadTimeout(timeout);

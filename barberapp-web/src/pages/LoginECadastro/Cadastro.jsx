@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom'; 
-import api from '../api/api';
+import { useNavigate, Link } from 'react-router-dom';
+import { Title } from './Style.js';
+import api from '../../api/api.js';
 
 function Cadastro() {
   const navigate = useNavigate();
@@ -11,8 +12,8 @@ function Cadastro() {
   const [erro, setErro] = useState('');
   const [carregando, setCarregando] = useState(false);
 
-  async function handleCadastro(event) {
-    event.preventDefault();
+  async function handleCadastro(event) { // Função assíncrona para lidar com o envio do formulário de cadastro
+    event.preventDefault(); // Impede o comportamento padrão do navegador de recarregar a página ao enviar o formulário
     setErro('');
     setCarregando(true);
 
@@ -33,7 +34,7 @@ function Cadastro() {
 
   return (
     <div style={{ maxWidth: '320px', margin: '80px auto' }}>
-      <h1>Cadastro</h1>
+      <Title>Cadastro</Title>
 
       <form onSubmit={handleCadastro}>
         
