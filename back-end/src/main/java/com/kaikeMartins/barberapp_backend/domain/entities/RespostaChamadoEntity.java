@@ -1,6 +1,5 @@
 package com.kaikeMartins.barberapp_backend.domain.entities;
 
-import com.kaikeMartins.barberapp_backend.domain.enums.ChamadoStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;

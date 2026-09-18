@@ -5,7 +5,6 @@ import com.kaikeMartins.barberapp_backend.domain.enums.PrioridadeChamado;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
-import jakarta.persistence.EntityListeners;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;

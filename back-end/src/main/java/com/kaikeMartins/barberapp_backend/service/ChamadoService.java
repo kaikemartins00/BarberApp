@@ -9,7 +9,6 @@ import com.kaikeMartins.barberapp_backend.domain.enums.PrioridadeChamado;
 import com.kaikeMartins.barberapp_backend.dto.ChamadoRequest;
 import com.kaikeMartins.barberapp_backend.dto.ChamadoResponse;
 import com.kaikeMartins.barberapp_backend.dto.RespostaChamRequest;
-import com.kaikeMartins.barberapp_backend.dto.RespostaChamResponse;
 import com.kaikeMartins.barberapp_backend.exception.BadRequestException;
 import com.kaikeMartins.barberapp_backend.exception.NotFoundException;
 import com.kaikeMartins.barberapp_backend.exception.ResourceNotFoundException;
