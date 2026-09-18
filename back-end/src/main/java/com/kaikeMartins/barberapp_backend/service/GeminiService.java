@@ -30,7 +30,6 @@ public class GeminiService {
     private final HistoricoRepository historicoRepository;
     private final GeminiClient geminiClient;
     private final ClienteRepository clienteRepository;
-    private GeminiResponse geminiResponse;
 
     public HistoricoResponse toResponse(HistoricoConversaEntity entity) {
         return new HistoricoResponse(
@@ -42,40 +41,16 @@ public class GeminiService {
         );
     }
 
-    public List<HistoricoConversaEntity> findAll() {
-            return historicoRepository.findAll();
+    public List<HistoricoResponse> findAll() {
+            return historicoRepository.findAll()
+                    .stream()
+                    .map(this::toResponse)
+                    .toList();
     }
 
-    public GeminiResponse conversa(GeminiRequest request, HistoricoResponse response) {
-        ClienteEntity cliente = getAuthenticatedUser();
+    // public GeminiResponse conversa(GeminiRequest request, HistoricoResponse response) {}
 
-        ResponseEntity resp = geminiClient.getGeminiRequest(request);
-
-        Client client = new Client();
-
-        CreateModelInteraction params =
-                CreateModelInteraction.builder()
-                        .model(Model.of(""))
-                        .input(InteractionsInput.of(""))
-                        .build();
-
-        Interaction interaction =
-                client.interactions.create(CreateInteractionRequestBody.of(params)).interaction().get();
-
-        HistoricoConversaEntity entity = HistoricoConversaEntity.builder()
-                .id(response.id())
-                .role(response.role())
-                .msg(String.valueOf(resp))
-                .msgDate(response.msgDate())
-                .cliente(cliente)
-                .build();
-
-        historicoRepository.save(entity);
-        return geminiResponse;
-
-    }
-
-    private ClienteEntity getAuthenticatedUser() {
+    private ClienteEntity getClienteAutenticado() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return clienteRepository.findByEmail(authentication.getName()).orElseThrow(() -> new NotFoundException("User not found"));
     }
