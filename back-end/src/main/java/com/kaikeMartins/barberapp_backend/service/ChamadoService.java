@@ -3,21 +3,26 @@ package com.kaikeMartins.barberapp_backend.service;
 import com.kaikeMartins.barberapp_backend.domain.entities.BarbeiroEntity;
 import com.kaikeMartins.barberapp_backend.domain.entities.ChamadoEntity;
 import com.kaikeMartins.barberapp_backend.domain.entities.ClienteEntity;
+import com.kaikeMartins.barberapp_backend.domain.entities.RespostaChamadoEntity;
 import com.kaikeMartins.barberapp_backend.domain.enums.ChamadoStatus;
 import com.kaikeMartins.barberapp_backend.domain.enums.PrioridadeChamado;
 import com.kaikeMartins.barberapp_backend.dto.ChamadoRequest;
 import com.kaikeMartins.barberapp_backend.dto.ChamadoResponse;
+import com.kaikeMartins.barberapp_backend.dto.RespostaChamRequest;
+import com.kaikeMartins.barberapp_backend.dto.RespostaChamResponse;
+import com.kaikeMartins.barberapp_backend.exception.BadRequestException;
 import com.kaikeMartins.barberapp_backend.exception.NotFoundException;
+import com.kaikeMartins.barberapp_backend.exception.ResourceNotFoundException;
 import com.kaikeMartins.barberapp_backend.repository.BarbeiroRepository;
 import com.kaikeMartins.barberapp_backend.repository.ChamadoRepository;
 import com.kaikeMartins.barberapp_backend.repository.ClienteRepository;
+import com.kaikeMartins.barberapp_backend.repository.RespostaRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.jspecify.annotations.NonNull;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -26,6 +31,7 @@ import java.util.Optional;
 public class ChamadoService {
 
     private final ChamadoRepository chamadoRepository;
+    private final RespostaRepository respostaRepository;
     private final BarbeiroRepository barbeiroRepository;
     private final ClienteRepository clienteRepository;
 
@@ -42,7 +48,7 @@ public class ChamadoService {
         );
     }
 
-    public List<ChamadoResponse> toResponse() {
+    public List<ChamadoResponse> findAll() {
         return chamadoRepository.findAll()
                 .stream()
                 .map(this::toResponse)
@@ -63,6 +69,38 @@ public class ChamadoService {
                 .build();
         
         return chamadoRepository.save(entity);
+    }
+
+    @Transactional
+    public RespostaChamadoEntity iniciarChamado(Long id, RespostaChamRequest request) {
+        ChamadoEntity chamado = chamadoRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Chamado nao existe"));
+
+        BarbeiroEntity barbeiro = getBarbeiroAutenticado();
+
+        chamado.setBarbeiro(barbeiro);
+        chamado.setStatus(ChamadoStatus.EM_ANDAMENTO);
+
+        RespostaChamadoEntity respostaEntity = RespostaChamadoEntity.builder()
+                .respostaMsg(request.respostaMsg())
+                .barbeiro(barbeiro)
+                .chamado(chamado)
+                .build();
+
+
+        return respostaRepository.save(respostaEntity);
+    }
+
+    @Transactional
+    public void finalizarChamado(Long id) {
+        ChamadoEntity chamado = chamadoRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Chamado nao existe"));
+
+        if (chamado.getStatus() == ChamadoStatus.FINALIZADO) {
+            throw new BadRequestException("Esse chamado ja foi finalizado");
+        }
+
+        chamado.setStatus(ChamadoStatus.FINALIZADO);
     }
 
     private PrioridadeChamado getPrioridade(ChamadoRequest request) {

@@ -9,6 +9,8 @@ import jakarta.persistence.EntityListeners;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Getter
@@ -42,5 +44,8 @@ public class ChamadoEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "barbeiro_id")
     private BarbeiroEntity barbeiro;
+
+    @OneToMany(mappedBy = "chamado", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<RespostaChamadoEntity> respostas = new ArrayList<>();
 
 }
