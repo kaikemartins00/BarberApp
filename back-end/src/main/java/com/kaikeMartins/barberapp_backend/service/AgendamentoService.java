@@ -22,6 +22,19 @@ public class AgendamentoService {
     private final BarbeiroRepository barbeiroRepository;
     private final ServicoRepository servicoRepository;
 
+    private AgendamentoResponse toResponse(AgendamentoEntity entity) {
+        return new AgendamentoResponse(
+                entity.getId(),
+                entity.getCliente().getNome(),
+                entity.getBarbeiro().getNome(),
+                entity.getServico().getNome(),
+                entity.getServico().getPreco(),
+                entity.getData(),
+                entity.getHorario(),
+                entity.getStatus()
+        );
+    }
+
     public AgendamentoResponse create(AgendamentoRequest request) {
         ClienteEntity cliente = clienteAutenticado();
 
@@ -74,8 +87,10 @@ public class AgendamentoService {
     }
 
     public AgendamentoResponse atualizarStatus(Long id, String novoStatus) {
+
         AgendamentoEntity agendamento = repository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Agendamento não encontrado"));
+
         agendamento.setStatus(novoStatus);
         return toResponse(repository.save(agendamento));
     }
@@ -84,16 +99,4 @@ public class AgendamentoService {
         return (ClienteEntity) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
     }
 
-    private AgendamentoResponse toResponse(AgendamentoEntity a) {
-        return new AgendamentoResponse(
-                a.getId(),
-                a.getCliente().getNome(),
-                a.getBarbeiro().getNome(),
-                a.getServico().getNome(),
-                a.getServico().getPreco(),
-                a.getData(),
-                a.getHorario(),
-                a.getStatus()
-        );
-    }
 }

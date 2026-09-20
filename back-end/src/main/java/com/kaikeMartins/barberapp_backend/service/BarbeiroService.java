@@ -1,8 +1,9 @@
 package com.kaikeMartins.barberapp_backend.service;
 
+import com.kaikeMartins.barberapp_backend.domain.entities.BarbeiroEntity;
 import com.kaikeMartins.barberapp_backend.domain.entities.ServicoEntity;
 import com.kaikeMartins.barberapp_backend.dto.BarbeiroRequest;
-import com.kaikeMartins.barberapp_backend.domain.entities.BarbeiroEntity;
+import com.kaikeMartins.barberapp_backend.dto.BarbeiroUpdateRequest;
 import com.kaikeMartins.barberapp_backend.dto.HorariosRequest;
 import com.kaikeMartins.barberapp_backend.dto.ServicosIdsRequest;
 import com.kaikeMartins.barberapp_backend.exception.NotFoundException;
@@ -44,7 +45,7 @@ public class BarbeiroService {
         return repository.save(entity);
     }
 
-    public BarbeiroEntity update(Long id, BarbeiroRequest request) {
+    public BarbeiroEntity update(Long id, BarbeiroUpdateRequest request) {
         try {
             BarbeiroEntity entity = repository.getReferenceById(id);
 
@@ -57,8 +58,9 @@ public class BarbeiroService {
         }
     }
 
-    private void updateData(BarbeiroEntity entity, BarbeiroRequest request) {
-        entity.setNome(request.nome());
+    private void updateData(BarbeiroEntity entity, BarbeiroUpdateRequest request) {
+        entity.setEmail(request.email());
+        entity.setSenha(request.senha());
         entity.setFotoUrl(request.fotoUrl());
     }
 

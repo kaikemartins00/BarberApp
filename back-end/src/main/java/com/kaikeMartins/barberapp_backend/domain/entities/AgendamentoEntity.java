@@ -2,8 +2,11 @@ package com.kaikeMartins.barberapp_backend.domain.entities;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 @Entity
@@ -12,6 +15,7 @@ import java.time.LocalTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@EntityListeners(AuditingEntityListener.class)
 @Table(name = "agendamentos")
 public class AgendamentoEntity {
 
@@ -36,6 +40,10 @@ public class AgendamentoEntity {
 
     @Column(nullable = false)
     private LocalTime horario;
+
+    @CreatedDate
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime criadoEm;
 
     @Column(nullable = false)
     private String status;

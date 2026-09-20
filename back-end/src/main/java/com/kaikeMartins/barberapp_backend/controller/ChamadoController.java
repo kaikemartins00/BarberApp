@@ -9,6 +9,7 @@ import com.kaikeMartins.barberapp_backend.service.ChamadoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,14 +23,15 @@ public class ChamadoController {
 
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
+    @PreAuthorize("hasAnyRole('BARBEIRO', 'ADMIN')")
     public List<ChamadoResponse> findAll() {
-
         return service.findAll();
 
     }
 
     @PostMapping("/criar")
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAnyRole('CLIENTE', 'BARBEIRO', 'ADMIN')")
     public ChamadoEntity create(@Valid @RequestBody ChamadoRequest request) {
         return service.create(request);
 
@@ -37,6 +39,7 @@ public class ChamadoController {
 
     @PostMapping("/responder")
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAnyRole('BARBEIRO', 'ADMIN')")
     public RespostaChamadoEntity resposta(@Valid @RequestBody Long id, RespostaChamRequest request) {
         return service.iniciarChamado(id, request);
 
@@ -44,8 +47,10 @@ public class ChamadoController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAnyRole('BARBEIRO', 'ADMIN')")
     public void delete(@PathVariable Long id) {
         service.finalizarChamado(id);
+
     }
 
 }

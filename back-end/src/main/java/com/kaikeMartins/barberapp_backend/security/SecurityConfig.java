@@ -43,14 +43,7 @@ public class SecurityConfig {
                         }))
 
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**", "/gemini/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/barbeiros/**", "/servicos/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/barbeiros/**", "/servicos/**").hasAnyAuthority("ROLE_ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/agendamentos/**").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN", "ROLE_BARBEIRO")
-                        .requestMatchers(HttpMethod.GET, "/agendamentos/**").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN", "ROLE_BARBEIRO")
-                        .requestMatchers(HttpMethod.PUT, "/agendamentos/**").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN", "ROLE_BARBEIRO")
-                        .requestMatchers(HttpMethod.PUT, "/barbeiros/**", "/servicos/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_BARBEIRO")
-                        .requestMatchers(HttpMethod.DELETE, "/barbeiros/**", "/servicos/**").hasAnyAuthority("ROLE_ADMIN")
+                        .requestMatchers("/auth/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
