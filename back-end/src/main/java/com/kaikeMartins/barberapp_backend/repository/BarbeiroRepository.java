@@ -8,4 +8,6 @@ import java.util.Optional;
 public interface BarbeiroRepository extends JpaRepository<BarbeiroEntity, Long> {
     Optional<BarbeiroEntity> findByEmail(String email);
     boolean existsByEmail(String email);
+
+    Optional<BarbeiroEntity> findByNomeIgnoreCase(String nome);
 }

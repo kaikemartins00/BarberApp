@@ -16,7 +16,10 @@ import java.time.LocalTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
-@Table(name = "agendamentos")
+@Table(
+        name = "agendamentos_tb",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"barbeiro_id", "data", "horario"})
+)
 public class AgendamentoEntity {
 
     @Id

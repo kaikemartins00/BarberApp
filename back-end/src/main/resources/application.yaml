@@ -35,8 +35,8 @@ spring:
 
 admin:
   email: ${ADMIN_EMAIL}
-  senha: ${ADMIN_SENHA}
-  nome: ${ADMIN_NOME}
+  senha: ${ADMIN_PASSWORD}
+  nome: ${ADMIN_NAME}
 
 gemini:
   api_key: ${API_KEY}
