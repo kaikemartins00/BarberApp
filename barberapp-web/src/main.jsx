@@ -7,6 +7,10 @@ import Cadastro from "./pages/LoginECadastro/Cadastro.jsx";
 import Agendamento from "./pages/Agendamento/Agendamento.jsx";
 import HistAgendamento from "./pages/Agendamento/HistAgendamento.jsx";
 import VerificarConta from "./pages/LoginECadastro/VerificarConta.jsx";
+import RotaProtegida from "./components/RotaProtegida.jsx";
+import Admin from "./pages/Admin/Admin.jsx";
+import PainelBarbeiro from "./pages/Barbeiro/PainelBarbeiro.jsx";
+import './index.css';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -16,15 +20,26 @@ createRoot(document.getElementById('root')).render(
 
               <Route path="/Home" element={<Home />} />
 
-              <Route path="/agendamentos" element={<Agendamento />} />
+              <Route path="/agendamento" element={<Agendamento />} />
 
-              <Route path="/histAgendamentos" element={<HistAgendamento />} />
+              <Route path="/histAgendamento" element={<HistAgendamento />} />
 
               <Route path="/login" element={<Login />} />
 
               <Route path="/cadastro" element={<Cadastro />} />
 
               <Route path="/verificar-conta" element={<VerificarConta />} />
+
+              <Route path="/admin" element={
+                                        <RotaProtegida roles={['ROLE_ADMIN']}>
+                                           <Admin />
+                                       </RotaProtegida>
+                                   } />
+
+              <Route path="/barbeiro" element={
+                                           <RotaProtegida roles={['ROLE_BARBEIRO', 'ROLE_ADMIN']}>
+                                              <PainelBarbeiro />
+                                          </RotaProtegida>} />
           </Routes>
       </BrowserRouter>
   </StrictMode>,

@@ -21,6 +21,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -47,13 +49,24 @@ public class AuthService {
         RoleEntity role = roleRepository.findByName(RoleTypeEnum.ROLE_BARBEIRO.name())
                 .orElseGet(() -> roleRepository.save(RoleEntity.builder().name(RoleTypeEnum.ROLE_BARBEIRO.name()).build()));
 
+        String codigo = gerarCodigo();
+
+        Set<RoleEntity> userRoles = new HashSet<>();
+        userRoles.add(role);
+
         barbeiroRepository.save(BarbeiroEntity.builder()
                 .nome(dto.nome())
                 .email(dto.email())
+                .telefone(dto.telefone())
                 .senha(passwordEncoder.encode(dto.senha()))
                 .fotoUrl(dto.fotoUrl())
                 .roles(Set.of(role))
+                .verificado(false)
+                .codigoVerificacao(codigo)
+                .codigoExpiracao(LocalDateTime.now().plusMinutes(5))
                 .build());
+
+        emailService.enviarCodigo(dto.email(), codigo);
     }
 
     public void register(CadastroRequest dto) {
@@ -73,7 +86,7 @@ public class AuthService {
 
         String codigo = gerarCodigo();
 
-        ClienteEntity cliente = ClienteEntity.builder()
+        clienteRepository.save(ClienteEntity.builder()
                 .nome(dto.nome())
                 .email(dto.email())
                 .senha(passwordEncoder.encode(dto.senha()))
@@ -82,9 +95,7 @@ public class AuthService {
                 .verificado(false)
                 .codigoVerificacao(codigo)
                 .codigoExpiracao(LocalDateTime.now().plusMinutes(5))
-                .build();
-
-        clienteRepository.save(cliente);
+                .build());
 
         emailService.enviarCodigo(dto.email(), codigo);
     }
@@ -134,22 +145,24 @@ public class AuthService {
 
     public TokenResponse login(LoginRequest loginRequest) {
         try {
+
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(loginRequest.email(), loginRequest.senha()));
 
-            Object principal = authentication.getPrincipal();
+            ClienteEntity cliente = clienteRepository.findByEmail(loginRequest.email())
+                    .orElseThrow(() -> new BadRequestException("Usuário não encontrado."));
 
-            if (principal instanceof ClienteEntity cliente && !cliente.isVerificado()) {
+            if (!cliente.isVerificado()) {
                 throw new BadRequestException("Conta não verificada. Confira seu email.");
             }
 
-            if (principal instanceof BarbeiroEntity barbeiro && !barbeiro.isVerificado()) {
-                throw new BadRequestException("Conta não verificada. Confira seu email.");
-            }
+            List<String> rolesConvertidas = cliente.getRoles().stream()
+                    .map(RoleEntity::getAuthority)
+                    .toList();
 
             String token = tokenProvider.generateToken(authentication);
 
-            return new TokenResponse(token, expirationTime);
+            return new TokenResponse(token, expirationTime, cliente.getId(), rolesConvertidas);
 
         } catch (BadCredentialsException e) {
             throw new BadRequestException("invalid credentials");

@@ -1,14 +1,18 @@
-import {Title} from "../LoginECadastro/Style.js";
-
+import { Title } from '../LoginECadastro/Style.js';
+import Navbar from '../../components/Navbar.jsx';
 
 function HistAgendamento() {
-
-
     return (
-        <div style={{ maxWidth: '320px', margin: '80px auto' }}>
-            <Title>BEM-VINDO AO BARBERWEB</Title>
-
-        </div>
+        <>
+            <Navbar />
+            <main className="page">
+                <header className="page__head">
+                    <Title>Meus agendamentos</Title>
+                    <p className="muted">Em breve: seu histórico e os próximos horários.</p>
+                </header>
+            </main>
+        </>
     );
 }
+
 export default HistAgendamento;

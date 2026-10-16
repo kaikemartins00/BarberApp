@@ -8,6 +8,7 @@ public record BarbeiroRequest (
         @NotBlank String nome,
         @NotBlank @Email String email,
         @NotBlank String senha,
+        @NotBlank String telefone,
         String fotoUrl
 )
 {}

@@ -33,6 +33,9 @@ public class BarbeiroEntity implements UserDetails {
     @Column(nullable = false)
     private String senha;
 
+    @Column(nullable = false)
+    private String telefone;
+
     @Column(name = "foto_url")
     private String fotoUrl;
 
@@ -42,6 +45,7 @@ public class BarbeiroEntity implements UserDetails {
             joinColumns = @JoinColumn(name = "barbeiro_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id")
     )
+
     @Builder.Default
     private Set<RoleEntity> roles = new HashSet<>();
 
@@ -51,11 +55,13 @@ public class BarbeiroEntity implements UserDetails {
             joinColumns = @JoinColumn(name = "barbeiro_id"),
             inverseJoinColumns = @JoinColumn(name = "servico_id")
     )
-
+    @Builder.Default
     private Set<ServicoEntity> servicos = new HashSet<>();
 
-    @JoinTable(name = "barbeiro_horarios_trabalho", joinColumns = @JoinColumn(name = "barbeiro_id"))
+    @ElementCollection
+    @CollectionTable(name = "barbeiro_horarios_trabalho", joinColumns = @JoinColumn(name = "barbeiro_id"))
     @Column(name = "horario")
+    @Builder.Default
     private Set<LocalTime> horariosTrabalho = new HashSet<>();
 
     @Column(name = "verificado")

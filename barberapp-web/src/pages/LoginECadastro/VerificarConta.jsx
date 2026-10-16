@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useNavigate, Link } from 'react-router-dom'; 
 import api from '../../api/api.js';
+import AuthLayout from "../../components/AuthLayout.jsx";
 
 function VerificarConta() {
   const [codigo, setCodigo] = useState('');
@@ -33,8 +34,8 @@ function VerificarConta() {
       const response = await api.post('/auth/validar-codigo', { email, codigo });
       const token = response.data.token;
 
-      console.log('Token recebido:', token);
-      alert('Conta verificada com sucesso!');
+      alert('Conta verificada com sucesso! Faça login para entrar.');
+      navigate('/login', { replace: true });
 
     } catch (error) {
       const status = error.response?.status;
@@ -81,41 +82,34 @@ function VerificarConta() {
   }
 
   return (
-    <div style={{ maxWidth: '320px', margin: '80px auto' }}>
-      <h1>Verificar Conta</h1>
+      <AuthLayout
+          titulo="Verificar conta"
+          subtitulo={email ? `Enviamos um código para ${email}.` : 'Digite o código que recebeu por e-mail.'}
+      >
+        <form className="form" onSubmit={handleVerificarConta}>
+          <label className="field">
+            <span>Código de verificação</span>
+            <input type="text" placeholder="000000" value={codigo}
+                   onChange={(e) => setCodigo(e.target.value)} required />
+          </label>
 
-      <form onSubmit={handleVerificarConta}>
-        <div style={{ marginTop: '12px' }}>
-          <input
-            type="text"
-            placeholder="Código de Verificação"
-            value={codigo}
-            onChange={(e) => setCodigo(e.target.value)}
-            required
-          />
+          {erro && <p className="alert alert--erro">{erro}</p>}
+          {sucesso && <p className="alert alert--ok">{sucesso}</p>}
+
+          <button type="submit" className="btn btn--primary btn--block" disabled={carregando}>
+            {carregando ? 'Verificando...' : 'Verificar'}
+          </button>
+
+          <button type="button" className="btn btn--ghost btn--block"
+                  onClick={handleReenviar} disabled={reenviando || cooldown > 0}>
+            {cooldown > 0 ? `Reenviar em ${cooldown}s` : reenviando ? 'Enviando...' : 'Reenviar código'}
+          </button>
+        </form>
+
+        <div className="auth__rodape">
+          <Link to="/login">Voltar ao login</Link>
         </div>
-
-        {erro && <p style={{ color: 'red' }}>{erro}</p>}
-        {sucesso && <p style={{ color: 'green' }}>{sucesso}</p>}
-
-        <button type="submit" disabled={carregando} style={{ marginTop: '16px' }}>
-          {carregando ? 'Verificando...' : 'Verificar'}
-        </button>
-
-        <button
-          type="button"
-          onClick={handleReenviar}
-          disabled={reenviando || cooldown > 0}
-          style={{ marginTop: '12px' }}
-        >
-          {cooldown > 0
-            ? `Reenviar em ${cooldown}s`
-            : reenviando
-              ? 'Enviando...'
-              : 'Reenviar código'}
-        </button>
-      </form>
-    </div>
+      </AuthLayout>
   );
 }
 

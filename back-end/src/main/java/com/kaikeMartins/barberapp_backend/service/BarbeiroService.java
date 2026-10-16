@@ -1,13 +1,13 @@
 package com.kaikeMartins.barberapp_backend.service;
 
 import com.kaikeMartins.barberapp_backend.domain.entities.BarbeiroEntity;
+import com.kaikeMartins.barberapp_backend.domain.entities.RoleEntity;
 import com.kaikeMartins.barberapp_backend.domain.entities.ServicoEntity;
-import com.kaikeMartins.barberapp_backend.dto.BarbeiroRequest;
-import com.kaikeMartins.barberapp_backend.dto.BarbeiroUpdateRequest;
-import com.kaikeMartins.barberapp_backend.dto.HorariosRequest;
-import com.kaikeMartins.barberapp_backend.dto.ServicosIdsRequest;
+import com.kaikeMartins.barberapp_backend.domain.enums.RoleTypeEnum;
+import com.kaikeMartins.barberapp_backend.dto.*;
 import com.kaikeMartins.barberapp_backend.exception.NotFoundException;
 import com.kaikeMartins.barberapp_backend.repository.BarbeiroRepository;
+import com.kaikeMartins.barberapp_backend.repository.RoleRepository;
 import com.kaikeMartins.barberapp_backend.repository.ServicoRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -23,35 +23,40 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class BarbeiroService {
 
-    private final BarbeiroRepository repository;
+    private final BarbeiroRepository barbeiroRepository;
     private final ServicoRepository servicoRepository;
+    private final RoleRepository roleRepository;
 
-
-    public List<BarbeiroEntity> findAll() {
-        return repository.findAll();
+    public BarbeiroResponse toResponse(BarbeiroEntity entity) {
+        return new BarbeiroResponse(
+                entity.getId(),
+                entity.getNome(),
+                entity.getFotoUrl(),
+                entity.getServicos(),
+                entity.getHorariosTrabalho()
+        );
     }
 
-    public BarbeiroEntity findById(Long id) {
-        return repository.findById(id)
+    public List<BarbeiroResponse> findAll() {
+        return barbeiroRepository.findAll()
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    public BarbeiroResponse findById(Long id) {
+        return barbeiroRepository.findById(id)
+                .map(this::toResponse)
                 .orElseThrow(() -> new IllegalArgumentException("Barbeiro não encontrado"));
-    }
-
-    public BarbeiroEntity create(BarbeiroRequest request) {
-        BarbeiroEntity entity = BarbeiroEntity.builder()
-                .nome(request.nome())
-                .fotoUrl(request.fotoUrl())
-                .build();
-
-        return repository.save(entity);
     }
 
     public BarbeiroEntity update(Long id, BarbeiroUpdateRequest request) {
         try {
-            BarbeiroEntity entity = repository.getReferenceById(id);
+            BarbeiroEntity entity = barbeiroRepository.getReferenceById(id);
 
             updateData(entity, request);
 
-            return repository.save(entity);
+            return barbeiroRepository.save(entity);
 
         } catch (EntityNotFoundException e) {
             throw new NotFoundException("Cannot update. Barbeiro not found with id: " + id);
@@ -71,19 +76,19 @@ public class BarbeiroService {
     public void atualizarHorarios(HorariosRequest request) {
         BarbeiroEntity barbeiro = barbeiroAutenticado();
         barbeiro.setHorariosTrabalho(new HashSet<>(request.horarios()));
-        repository.save(barbeiro);
+        barbeiroRepository.save(barbeiro);
     }
 
     public void atualizarServicos(ServicosIdsRequest request) {
         BarbeiroEntity barbeiro = barbeiroAutenticado();
         Set<ServicoEntity> servicos = new HashSet<>(servicoRepository.findAllById(request.servicoIds()));
         barbeiro.setServicos(servicos);
-        repository.save(barbeiro);
+        barbeiroRepository.save(barbeiro);
     }
 
     public void delete(Long id) {
         try {
-            repository.deleteById(id);
+            barbeiroRepository.deleteById(id);
 
         } catch (EmptyResultDataAccessException e) {
             throw new NotFoundException("Cannot delete. Barbeiro not found with id: " + id);

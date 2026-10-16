@@ -2,10 +2,7 @@ package com.kaikeMartins.barberapp_backend.controller;
 
 import com.kaikeMartins.barberapp_backend.domain.entities.BarbeiroEntity;
 import com.kaikeMartins.barberapp_backend.domain.entities.ServicoEntity;
-import com.kaikeMartins.barberapp_backend.dto.BarbeiroRequest;
-import com.kaikeMartins.barberapp_backend.dto.BarbeiroUpdateRequest;
-import com.kaikeMartins.barberapp_backend.dto.HorariosRequest;
-import com.kaikeMartins.barberapp_backend.dto.ServicosIdsRequest;
+import com.kaikeMartins.barberapp_backend.dto.*;
 import com.kaikeMartins.barberapp_backend.service.BarbeiroService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +24,7 @@ public class BarbeiroController {
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
     @PreAuthorize("hasAnyRole('CLIENTE', 'BARBEIRO', 'ADMIN')")
-    public List<BarbeiroEntity> findAll() {
+    public List<BarbeiroResponse> findAll() {
         return service.findAll();
 
     }
@@ -35,16 +32,8 @@ public class BarbeiroController {
     @GetMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
     @PreAuthorize("hasAnyRole('CLIENTE', 'BARBEIRO', 'ADMIN')")
-    public BarbeiroEntity findById(@PathVariable Long id) {
+    public BarbeiroResponse findById(@PathVariable Long id) {
         return service.findById(id);
-
-    }
-
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('ADMIN')")
-    public BarbeiroEntity create(@Valid @RequestBody BarbeiroRequest request) {
-        return service.create(request);
 
     }
 
@@ -60,7 +49,7 @@ public class BarbeiroController {
     @ResponseStatus(HttpStatus.OK)
     @PreAuthorize("hasAnyRole('CLIENTE', 'BARBEIRO', 'ADMIN')")
     public Set<ServicoEntity> servicosDoBarbeiro(@PathVariable Long id) {
-        return service.findById(id).getServicos();
+        return service.findById(id).servicos();
 
     }
 
@@ -68,7 +57,7 @@ public class BarbeiroController {
     @ResponseStatus(HttpStatus.OK)
     @PreAuthorize("hasAnyRole('CLIENTE', 'BARBEIRO', 'ADMIN')")
     public Set<LocalTime> horariosDoBarbeiro(@PathVariable Long id) {
-        return service.findById(id).getHorariosTrabalho();
+        return service.findById(id).horariosTrabalho();
     }
 
     @PutMapping("/me/horarios")
