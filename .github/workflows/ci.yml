@@ -27,4 +27,6 @@ jobs:
           SPRING_MAIL_PORT: 25
           SPRING_DATASOURCE_URL: jdbc:h2:mem:testdb;MODE=PostgreSQL
           SPRING_DATASOURCE_DRIVER-CLASS-NAME: org.h2.Driver
+          LANGCHAIN4J_GOOGLE_AI_GEMINI_API_KEY: "mocked-api-key-for-test-purposes"
+          LANGCHAIN4J_GOOGLE_AI_GEMINI_MODEL_NAME: "gemini-1.5-flash"
         run: mvn -B clean verify
