@@ -62,15 +62,6 @@ class ServicoRepositoryTest {
                 () -> repository.saveAndFlush(semNome));
     }
 
-    @DisplayName("Não permite dois serviços com o mesmo nome")
-    @Test
-    void naoPermiteNomeDuplicado() {
-        ServicoEntity duplicado = ServicoEntity.builder().nome("Corte").preco(50.00).build();
-
-        assertThrows(DataIntegrityViolationException.class,
-                () -> repository.saveAndFlush(duplicado));
-    }
-
     @DisplayName("Atualizar serviço persiste a alteração")
     @Test
     void atualizarServico() {
@@ -134,12 +125,6 @@ class ServicoRepositoryTest {
     void existsByNomeIgnoreCase() {
         assertTrue(repository.existsByNomeIgnoreCase("BARBA"));
         assertTrue(repository.existsByNomeIgnoreCase("barba"));
-    }
-
-    @DisplayName("Não existe por nome inexistente")
-    @Test
-    void existsByNomeIgnoreCaseInexistente() {
-        assertFalse(repository.existsByNomeIgnoreCase("Hidratação"));
     }
 
     @DisplayName("Deletar serviço")

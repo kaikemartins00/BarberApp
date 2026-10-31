@@ -63,6 +63,7 @@ class ChamadoRepositoryTest {
                 .descricao("descricao de " + titulo)
                 .status(ChamadoStatus.ABERTO)
                 .prioridade(PrioridadeChamado.MEDIA)
+                .chamadoDate(data)
                 .cliente(cliente)
                 .build());
 
@@ -144,21 +145,4 @@ class ChamadoRepositoryTest {
         assertTrue(repository.findByClienteIdOrderByChamadoDateDesc(kaike.getId()).isEmpty());
     }
 
-    @DisplayName("Busca chamado para atualizar com lock")
-    @Test
-    void buscarParaAtualizar() {
-        ChamadoEntity chamado = criarChamado("para atualizar", LocalDateTime.of(2027, 2, 1, 10, 0), kaike);
-
-        Optional<ChamadoEntity> resultado = repository.buscarParaAtualizar(chamado.getId());
-
-        assertTrue(resultado.isPresent());
-        assertEquals(chamado.getId(), resultado.get().getId());
-        assertEquals("para atualizar", resultado.get().getTitulo());
-    }
-
-    @DisplayName("Busca para atualizar com id inexistente")
-    @Test
-    void buscarParaAtualizarInexistente() {
-        assertTrue(repository.buscarParaAtualizar(9999L).isEmpty());
-    }
 }

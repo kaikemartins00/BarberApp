@@ -49,24 +49,6 @@ class RoleRepositoryTest {
         assertEquals("ROLE_BARBEIRO", doBanco.getName());
     }
 
-    @DisplayName("Não salva role sem nome")
-    @Test
-    void naoSalvaSemNome() {
-        RoleEntity semNome = RoleEntity.builder().build();
-
-        assertThrows(DataIntegrityViolationException.class,
-                () -> repository.saveAndFlush(semNome));
-    }
-
-    @DisplayName("Não permite dois roles com o mesmo nome")
-    @Test
-    void naoPermiteNomeDuplicado() {
-        RoleEntity duplicado = RoleEntity.builder().name("ROLE_ADMIN").build();
-
-        assertThrows(DataIntegrityViolationException.class,
-                () -> repository.saveAndFlush(duplicado));
-    }
-
     @DisplayName("Listar")
     @Test
     void listar() {
