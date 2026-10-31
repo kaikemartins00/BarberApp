@@ -22,4 +22,9 @@ jobs:
 
       - name: Compilar e rodar os testes unitários do Back-end
         working-directory: ./back-end
+        env:
+          SPRING_MAIL_HOST: localhost
+          SPRING_MAIL_PORT: 25
+          SPRING_DATASOURCE_URL: jdbc:h2:mem:testdb;MODE=PostgreSQL
+          SPRING_DATASOURCE_DRIVER-CLASS-NAME: org.h2.Driver
         run: mvn -B clean verify
