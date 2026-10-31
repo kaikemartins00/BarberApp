@@ -1,7 +1,5 @@
 package com.kaikeMartins.barberapp_backend.controller;
 
-import com.kaikeMartins.barberapp_backend.domain.entities.ChamadoEntity;
-import com.kaikeMartins.barberapp_backend.domain.entities.RespostaChamadoEntity;
 import com.kaikeMartins.barberapp_backend.dto.ChamadoRequest;
 import com.kaikeMartins.barberapp_backend.dto.ChamadoResponse;
 import com.kaikeMartins.barberapp_backend.dto.RespostaChamRequest;
@@ -22,35 +20,30 @@ public class ChamadoController {
     private final ChamadoService service;
 
     @GetMapping
-    @ResponseStatus(HttpStatus.OK)
     @PreAuthorize("hasAnyRole('BARBEIRO', 'ADMIN')")
-    public List<ChamadoResponse> findAll() {
-        return service.findAll();
+    public List<ChamadoResponse> findAll() { return service.findAll(); }
 
-    }
+    @GetMapping("/meus")
+    @PreAuthorize("hasRole('CLIENTE')")
+    public List<ChamadoResponse> meus() { return service.meus(); }
 
-    @PostMapping("/criar")
+    @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('CLIENTE', 'BARBEIRO', 'ADMIN')")
-    public ChamadoEntity create(@Valid @RequestBody ChamadoRequest request) {
-        return service.create(request);
+    @PreAuthorize("hasRole('CLIENTE')")
+    public ChamadoResponse create(@Valid @RequestBody ChamadoRequest request) { return service.create(request); }
 
-    }
+    @PostMapping("/{id}/assumir")
+    @PreAuthorize("hasAnyRole('BARBEIRO', 'ADMIN')")
+    public ChamadoResponse assumir(@PathVariable Long id) { return service.assumir(id); }
 
-    @PostMapping("/responder")
+    @PostMapping("/{id}/respostas")
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('BARBEIRO', 'ADMIN')")
-    public RespostaChamadoEntity resposta(@Valid @RequestBody Long id, RespostaChamRequest request) {
-        return service.iniciarChamado(id, request);
-
+    public ChamadoResponse responder(@PathVariable Long id, @Valid @RequestBody RespostaChamRequest request) {
+        return service.responder(id, request);
     }
 
-    @DeleteMapping("/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PutMapping("/{id}/finalizar")
     @PreAuthorize("hasAnyRole('BARBEIRO', 'ADMIN')")
-    public void delete(@PathVariable Long id) {
-        service.finalizarChamado(id);
-
-    }
-
+    public ChamadoResponse finalizar(@PathVariable Long id) { return service.finalizar(id); }
 }

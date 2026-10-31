@@ -24,7 +24,7 @@ public class AuthController {
 
     @PostMapping("/cadastro")
     @ResponseStatus(HttpStatus.CREATED)
-    public void register(@RequestBody CadastroRequest request) {
+    public void register(@RequestBody @Valid CadastroRequest request) {
         service.register(request);
     }
 

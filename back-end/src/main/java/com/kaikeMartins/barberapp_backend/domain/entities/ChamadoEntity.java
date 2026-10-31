@@ -44,7 +44,13 @@ public class ChamadoEntity {
     @JoinColumn(name = "barbeiro_id")
     private BarbeiroEntity barbeiro;
 
+    // quem está atendendo o chamado (admin ou barbeiro)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "responsavel_id")
+    private UsuarioEntity responsavel;
+
     @OneToMany(mappedBy = "chamado", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @Builder.Default
     private List<RespostaChamadoEntity> respostas = new ArrayList<>();
 
 }

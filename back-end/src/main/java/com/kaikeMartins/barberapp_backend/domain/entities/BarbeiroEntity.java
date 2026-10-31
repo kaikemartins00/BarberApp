@@ -2,12 +2,8 @@ package com.kaikeMartins.barberapp_backend.domain.entities;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -18,36 +14,24 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "barbeiros")
-public class BarbeiroEntity implements UserDetails {
+public class BarbeiroEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Long id; // Remove o @GeneratedValue!
+
+    @MapsId
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "usuario_id")
+    private UsuarioEntity usuario;
 
     @Column(nullable = false)
     private String nome;
-
-    @Column(nullable = false, unique = true)
-    private String email;
-
-    @Column(nullable = false)
-    private String senha;
 
     @Column(nullable = false)
     private String telefone;
 
     @Column(name = "foto_url")
     private String fotoUrl;
-
-    @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable(
-            name = "barbeiro_roles",
-            joinColumns = @JoinColumn(name = "barbeiro_id"),
-            inverseJoinColumns = @JoinColumn(name = "role_id")
-    )
-
-    @Builder.Default
-    private Set<RoleEntity> roles = new HashSet<>();
 
     @ManyToMany
     @JoinTable(
@@ -59,38 +43,9 @@ public class BarbeiroEntity implements UserDetails {
     private Set<ServicoEntity> servicos = new HashSet<>();
 
     @ElementCollection
-    @CollectionTable(name = "barbeiro_horarios_trabalho", joinColumns = @JoinColumn(name = "barbeiro_id"))
-    @Column(name = "horario")
+    @CollectionTable(name = "barbeiro_agenda", joinColumns = @JoinColumn(name = "barbeiro_id"))
+    @Column(name = "data_hora")
     @Builder.Default
-    private Set<LocalTime> horariosTrabalho = new HashSet<>();
+    private Set<LocalDateTime> horariosTrabalho = new HashSet<>();
 
-    @Column(name = "verificado")
-    private boolean verificado = false;
-
-    @Column(name = "codigo_verificacao")
-    private String codigoVerificacao;
-
-    @Column(name = "codigo_expiracao")
-    private LocalDateTime codigoExpiracao;
-
-    @Override
-    public Collection<? extends GrantedAuthority> getAuthorities() { return roles; }
-
-    @Override
-    public String getPassword() { return senha; }
-
-    @Override
-    public String getUsername() { return email; }
-
-    @Override
-    public boolean isAccountNonExpired() { return true; }
-
-    @Override
-    public boolean isAccountNonLocked() { return true; }
-
-    @Override
-    public boolean isCredentialsNonExpired() { return true; }
-
-    @Override
-    public boolean isEnabled() { return true; }
 }

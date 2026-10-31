@@ -5,12 +5,6 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 
 public record ServicoRequest(
-
-        @NotBlank
-        String nome,
-
-        @NotNull
-        Double preco
-
-)
-{}
+        @NotBlank String nome,
+        @NotNull @Positive Double preco
+) {}

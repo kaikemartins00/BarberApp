@@ -7,4 +7,5 @@ import java.util.Optional;
 
 public interface ServicoRepository extends JpaRepository<ServicoEntity, Long> {
     Optional<ServicoEntity> findByNomeIgnoreCase(String nome);
+    boolean existsByNomeIgnoreCase(String nome);
 }

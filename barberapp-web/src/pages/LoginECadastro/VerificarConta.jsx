@@ -31,10 +31,8 @@ function VerificarConta() {
     setCarregando(true);
 
     try {
-      const response = await api.post('/auth/validar-codigo', { email, codigo });
-      const token = response.data.token;
+      await api.post('/auth/validar-codigo', { email, codigo });
 
-      alert('Conta verificada com sucesso! Faça login para entrar.');
       navigate('/login', { replace: true });
 
     } catch (error) {
@@ -61,7 +59,7 @@ function VerificarConta() {
     setReenviando(true);
 
     try {
-      await api.post(`/auth/reenviar-codigo?email=${email}`);
+      await api.post('/auth/reenviar-codigo', null, { params: { email } });
       setSucesso('Novo código enviado!');
       setCooldown(30);
 

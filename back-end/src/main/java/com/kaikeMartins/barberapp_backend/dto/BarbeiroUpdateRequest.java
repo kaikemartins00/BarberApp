@@ -6,8 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 public record BarbeiroUpdateRequest(
 
         @NotBlank @Email String email,
-        @NotBlank String senha,
+        String senha,
         String fotoUrl
-)
-{}
+) {}
 

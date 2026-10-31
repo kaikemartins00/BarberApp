@@ -1,47 +1,56 @@
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar.jsx';
 import { BarberPole } from '../../components/Visuais.jsx';
-import {lerSessao} from "../../auth/session.js";
+import { lerSessao } from '../../auth/session.js';
 
-//Blocos/Card que aparecem na tela
-const ACOES_GERAIS = [
-    { titulo: 'Agendar', texto: 'Escolha o barbeiro, o serviço e o horário.', rota: '/agendamento', destaque: true }, // destaque: true serve para aplicar o tamanho maior ou estilo diferente
-    { titulo: 'Meus agendamentos', texto: 'Acompanhe seus horários marcados.', rota: '/histAgendamento' },
-    { titulo: 'Como agendar', texto: 'Um passo a passo rápido.' },
-    { titulo: 'Dúvidas', texto: 'Perguntas frequentes.' },
-    { titulo: 'Problemas', texto: 'Fale com a gente.' },
+const ACOES_CLIENTE = [
+    { titulo: 'Agendar', texto: 'Escolha o barbeiro, o serviço e o horário.', rota: '/agendamento', destaque: true },
+    { titulo: 'Meus agendamentos', texto: 'Acompanhe e cancele seus horários.', rota: '/histAgendamento' },
+    { titulo: 'Como agendar', texto: 'Um passo a passo rápido.', rota: '/como-agendar' },
+    { titulo: 'Dúvidas', texto: 'Perguntas frequentes.', rota: '/duvidas' },
+    { titulo: 'Mensagens', texto: 'Converse com o barbeiro.', rota: '/mensagens' },
+    { titulo: 'Problemas', texto: 'Fale com a gente.', rota: '/problemas' },
+    { titulo: 'Assistente', texto: 'Converse com a IA da barbearia.', rota: '/chat' },
+];
+
+const ACOES_BARBEIRO = [
+    { titulo: 'Minha agenda', texto: 'Veja seus serviços e horários.', rota: '/barbeiro' },
+    { titulo: 'Mensagens', texto: 'Converse com os clientes.', rota: '/mensagens' },
+    { titulo: 'Chamados', texto: 'Responda os problemas dos clientes.', rota: '/chamados' },
 ];
 
 const ACOES_ADMIN = [
-    { titulo: 'Painel Admin', texto: 'Gerenciar barbeiros, relatórios e horários.', rota: '/admin' }
+    { titulo: 'Painel Admin', texto: 'Gerenciar barbeiros, serviços e horários.', rota: '/admin' },
+    { titulo: 'Chamados', texto: 'Responda os problemas dos clientes.', rota: '/chamados' },
 ];
 
 function Home() {
     const navigate = useNavigate();
     const sessao = lerSessao();
-    console.log("Conteúdo da minha sessão no Front:", sessao);
+
     const isAdmin = sessao?.roles?.includes('ROLE_ADMIN');
-    const acoesVisiveis = isAdmin ? [...ACOES_GERAIS, ...ACOES_ADMIN] : ACOES_GERAIS;
+    const isBarbeiro = sessao?.roles?.includes('ROLE_BARBEIRO');
+
+    const acoesVisiveis = isAdmin ? ACOES_ADMIN : isBarbeiro ? ACOES_BARBEIRO : ACOES_CLIENTE;
 
     return (
         <>
-            {/* Renderiza a barra de navegação no topo da página. */}
             <Navbar />
-            <main className="page"> {/* Abre a tag principal do layout (<main>) com a classe CSS "page" */}
+            <main className="page">
                 <section className="hero">
                     <div>
                         <h1>Seu horário, do seu <em>jeito</em>.</h1>
                         <p>Agende em segundos com o barbeiro que você prefere. Sem fila e sem ligação.</p>
-                        <button className="btn btn--primary" onClick={() => navigate('/agendamento')}> {/* Cria o botão dourado "Agendar agora". */}
-                            Agendar agora
-                        </button>
+                        {!isAdmin && !isBarbeiro && (
+                            <button className="btn btn--primary" onClick={() => navigate('/agendamento')}>
+                                Agendar agora
+                            </button>
+                        )}
                     </div>
                     <BarberPole />
                 </section>
 
                 <section className="acoes">
-                    {/*  o método .map(). vai percorrer a lista ACOES  item por item. Para cada item encontrado, ele vai gerar a estrutura abaixo automaticamente.*/}
-
                     {acoesVisiveis.map((acao) => (
                         <button
                             key={acao.titulo}

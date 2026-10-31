@@ -1,21 +1,21 @@
 package com.kaikeMartins.barberapp_backend.dto;
 
-import com.kaikeMartins.barberapp_backend.domain.entities.BarbeiroEntity;
-import com.kaikeMartins.barberapp_backend.domain.entities.ClienteEntity;
 import com.kaikeMartins.barberapp_backend.domain.enums.ChamadoStatus;
 import com.kaikeMartins.barberapp_backend.domain.enums.PrioridadeChamado;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
-public record ChamadoResponse (
+public record ChamadoResponse(
         Long id,
         String titulo,
         String descricao,
         LocalDateTime chamadoDate,
         ChamadoStatus status,
         PrioridadeChamado prioridade,
-        ClienteEntity cliente,
-        BarbeiroEntity barbeiro
-
-        )
-{}
+        String clienteNome,
+        String clienteEmail,
+        String responsavelNome,
+        boolean podeAtender,
+        List<RespostaChamResponse> respostas
+) {}

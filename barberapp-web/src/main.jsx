@@ -10,37 +10,53 @@ import VerificarConta from "./pages/LoginECadastro/VerificarConta.jsx";
 import RotaProtegida from "./components/RotaProtegida.jsx";
 import Admin from "./pages/Admin/Admin.jsx";
 import PainelBarbeiro from "./pages/Barbeiro/PainelBarbeiro.jsx";
+import ComoAgendar from './pages/Info/ComoAgendar.jsx';
+import Duvidas from './pages/Info/Duvidas.jsx';
+import Problemas from './pages/Info/Problemas.jsx';
+import Chat from './pages/Chat/Chat.jsx';
+import Chamados from './pages/Chamados/Chamados.jsx';
+import Mensagens from './pages/Mensagens/Mensagens.jsx';
 import './index.css';
 
 createRoot(document.getElementById('root')).render(
-  <StrictMode>
-      <BrowserRouter>
-          <Routes>
-              <Route path="/" element={<Home />} />
+    <StrictMode>
+        <BrowserRouter>
+            <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/home" element={<Home />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/cadastro" element={<Cadastro />} />
+                <Route path="/verificar-conta" element={<VerificarConta />} />
 
-              <Route path="/Home" element={<Home />} />
+                <Route path="/como-agendar" element={<ComoAgendar />} />
+                <Route path="/duvidas" element={<Duvidas />} />
 
-              <Route path="/agendamento" element={<Agendamento />} />
+                <Route path="/admin" element={
+                                          <RotaProtegida roles={['ROLE_ADMIN']}>
+                                             <Admin />
+                                         </RotaProtegida>
+                                     } />
 
-              <Route path="/histAgendamento" element={<HistAgendamento />} />
+                <Route path="/chamados" element={
+                                             <RotaProtegida roles={['ROLE_BARBEIRO', 'ROLE_ADMIN']}>
+                                                <Chamados />
+                                            </RotaProtegida>
+                                        } />
+                <Route path="/agendamento" element={
+                                                <RotaProtegida roles={['ROLE_CLIENTE']}><Agendamento /></RotaProtegida>} />
+                <Route path="/histAgendamento" element={
+                                                    <RotaProtegida roles={['ROLE_CLIENTE']}><HistAgendamento /></RotaProtegida>} />
+                <Route path="/problemas" element={
+                                              <RotaProtegida roles={['ROLE_CLIENTE']}><Problemas /></RotaProtegida>} />
+                <Route path="/chat" element={
+                                         <RotaProtegida roles={['ROLE_CLIENTE']}><Chat /></RotaProtegida>} />
 
-              <Route path="/login" element={<Login />} />
+                <Route path="/barbeiro" element={
+                                             <RotaProtegida roles={['ROLE_BARBEIRO']}><PainelBarbeiro /></RotaProtegida>} />
+                <Route path="/mensagens" element={
+                                              <RotaProtegida roles={['ROLE_CLIENTE', 'ROLE_BARBEIRO']}><Mensagens /></RotaProtegida>} />
 
-              <Route path="/cadastro" element={<Cadastro />} />
-
-              <Route path="/verificar-conta" element={<VerificarConta />} />
-
-              <Route path="/admin" element={
-                                        <RotaProtegida roles={['ROLE_ADMIN']}>
-                                           <Admin />
-                                       </RotaProtegida>
-                                   } />
-
-              <Route path="/barbeiro" element={
-                                           <RotaProtegida roles={['ROLE_BARBEIRO', 'ROLE_ADMIN']}>
-                                              <PainelBarbeiro />
-                                          </RotaProtegida>} />
-          </Routes>
-      </BrowserRouter>
-  </StrictMode>,
+            </Routes>
+        </BrowserRouter>
+    </StrictMode>,
 )

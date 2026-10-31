@@ -1,5 +1,6 @@
 package com.kaikeMartins.barberapp_backend.domain.entities;
 
+import com.kaikeMartins.barberapp_backend.domain.enums.AgendamentoStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
@@ -16,10 +17,7 @@ import java.time.LocalTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
-@Table(
-        name = "agendamentos_tb",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"barbeiro_id", "data", "horario"})
-)
+@Table(name = "agendamentos_tb")
 public class AgendamentoEntity {
 
     @Id
@@ -48,6 +46,7 @@ public class AgendamentoEntity {
     @Column(nullable = false, updatable = false)
     private LocalDateTime criadoEm;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String status;
+    private AgendamentoStatus status;
 }

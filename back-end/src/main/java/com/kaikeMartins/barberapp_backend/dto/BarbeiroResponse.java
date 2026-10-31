@@ -2,7 +2,8 @@ package com.kaikeMartins.barberapp_backend.dto;
 
 import com.kaikeMartins.barberapp_backend.domain.entities.ServicoEntity;
 
-import java.time.LocalTime;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Set;
 
 public record BarbeiroResponse(
@@ -10,5 +11,5 @@ public record BarbeiroResponse(
         String nome,
         String fotoUrl,
         Set<ServicoEntity> servicos,
-        Set<LocalTime> horariosTrabalho
+        List<LocalDateTime> horarios
 ) {}

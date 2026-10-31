@@ -19,19 +19,16 @@ function Cadastro() {
 
     try {
       const response = await api.post('/auth/cadastro', { nome, email, senha, telefone });
-      const token = response.data.token;
-
       navigate('/verificar-conta', {
           state: { email } 
       });
 
     } catch (error) {
-      setErro('Email ou senha inválidos');
+      setErro(error.response?.data?.message || "Não foi possível cadastrar.");
     } finally {
       setCarregando(false);
     }
   }
-
   return (
       <AuthLayout titulo="Criar conta" subtitulo="Leva menos de um minuto.">
         <form className="form" onSubmit={handleCadastro}>

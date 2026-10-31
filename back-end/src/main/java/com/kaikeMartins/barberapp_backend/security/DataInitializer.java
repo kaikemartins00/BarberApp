@@ -1,10 +1,10 @@
 package com.kaikeMartins.barberapp_backend.security;
 
-import com.kaikeMartins.barberapp_backend.domain.entities.ClienteEntity;
 import com.kaikeMartins.barberapp_backend.domain.entities.RoleEntity;
+import com.kaikeMartins.barberapp_backend.domain.entities.UsuarioEntity;
 import com.kaikeMartins.barberapp_backend.domain.enums.RoleTypeEnum;
-import com.kaikeMartins.barberapp_backend.repository.ClienteRepository;
 import com.kaikeMartins.barberapp_backend.repository.RoleRepository;
+import com.kaikeMartins.barberapp_backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
@@ -18,7 +18,7 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner {
 
-    private final ClienteRepository clienteRepository;
+    private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
 
@@ -27,9 +27,6 @@ public class DataInitializer implements CommandLineRunner {
 
     @Value("${admin.senha}")
     private String adminSenha;
-
-    @Value("${admin.nome}")
-    private String adminNome;
 
     @Override
     public void run(String... args) {
@@ -42,15 +39,14 @@ public class DataInitializer implements CommandLineRunner {
             }
         }
 
-        if (clienteRepository.existsByEmail(adminEmail)) {
+        if (userRepository.existsByEmail(adminEmail)) {
             return;
         }
 
         RoleEntity adminRole = roleRepository.findByName(RoleTypeEnum.ROLE_ADMIN.name())
                 .orElseThrow(() -> new RuntimeException("Role ADMIN não encontrada"));
 
-        ClienteEntity admin = new ClienteEntity();
-        admin.setNome(adminNome);
+        UsuarioEntity admin = new UsuarioEntity();
         admin.setEmail(adminEmail);
         admin.setVerificado(true);
         admin.setCodigoVerificacao("123456");
@@ -60,7 +56,7 @@ public class DataInitializer implements CommandLineRunner {
         roles.add(adminRole);
         admin.setRoles(roles);
 
-        clienteRepository.save(admin);
+        userRepository.save(admin);
 
         System.out.println("✅ Admin padrão criado: " + adminEmail);
     }

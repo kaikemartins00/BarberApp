@@ -1,12 +1,10 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Title } from '../LoginECadastro/Style.js';
 import api from '../../api/api.js';
-import { lerSessao, sair } from '../../auth/session.js';
+import { lerSessao } from '../../auth/session.js';
 import Navbar from "../../components/Navbar.jsx";
 
 function PainelBarbeiro() {
-    const navigate = useNavigate();
     const sessao = lerSessao();
     const [barbeiro, setBarbeiro] = useState(null);
     const [erro, setErro] = useState('');
@@ -18,11 +16,6 @@ function PainelBarbeiro() {
             .then((r) => setBarbeiro(r.data))
             .catch(() => setErro('Não foi possível carregar seus dados.'));
     }, []);
-
-    function handleSair() {
-        sair();
-        navigate('/login');
-    }
 
     return (
         <>
@@ -58,9 +51,15 @@ function PainelBarbeiro() {
                                 {(barbeiro.horarios || []).length === 0 && (
                                     <span className="muted">Nenhum horário definido ainda.</span>
                                 )}
-                                {(barbeiro.horarios || []).map((h) => (
-                                    <span key={h} className="chip chip--on">{String(h).slice(0, 5)}</span>
-                                ))}
+                                {(barbeiro.horarios || []).map((h) => {
+                                    const [data, hora] = String(h).split('T');
+                                    const [, mes, dia] = data.split('-');
+                                    return (
+                                        <span key={h} className="chip chip--on">
+                    {dia}/{mes} {hora.slice(0, 5)}
+                </span>
+                                    );
+                                })}
                             </div>
                         </section>
 

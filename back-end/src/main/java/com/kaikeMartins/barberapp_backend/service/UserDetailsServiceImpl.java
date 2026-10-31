@@ -1,7 +1,6 @@
 package com.kaikeMartins.barberapp_backend.service;
 
-import com.kaikeMartins.barberapp_backend.repository.BarbeiroRepository;
-import com.kaikeMartins.barberapp_backend.repository.ClienteRepository;
+import com.kaikeMartins.barberapp_backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -12,14 +11,11 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class UserDetailsServiceImpl implements UserDetailsService {
 
-    private final ClienteRepository clienteRepository;
-    private final BarbeiroRepository barbeiroRepository;
+    private final UserRepository userRepository;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        return clienteRepository.findByEmail(username)
-                .map(c -> (UserDetails) c)
-                .or(() -> barbeiroRepository.findByEmail(username).map(b -> (UserDetails) b))
+        return userRepository.findByEmail(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
     }
 }

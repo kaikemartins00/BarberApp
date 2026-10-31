@@ -1,6 +1,11 @@
 package com.kaikeMartins.barberapp_backend.dto;
 
-import java.time.LocalTime;
+import jakarta.validation.constraints.NotNull;
+
+import java.time.LocalDateTime;
 import java.util.List;
 
-public record HorariosRequest(List<LocalTime> horarios) {}
+public record HorariosRequest(
+
+        @NotNull List<LocalDateTime> horarios
+) {}

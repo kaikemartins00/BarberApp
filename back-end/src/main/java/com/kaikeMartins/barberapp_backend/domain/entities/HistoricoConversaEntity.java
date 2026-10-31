@@ -20,6 +20,7 @@ public class HistoricoConversaEntity {
 
     private String role;
 
+    @Column(columnDefinition = "TEXT")
     private String msg;
 
     private LocalDateTime msgDate;
