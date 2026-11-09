@@ -2,7 +2,7 @@ import axios from 'axios';
 import { sair } from '../auth/session.js';
 
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || 'http://18.225.184.135:8080/',
+    baseURL: import.meta.env.VITE_API_URL || 'http://3.144.2.55:8080/',
     timeout: 15000
 });
 
