@@ -2,14 +2,12 @@ import axios from 'axios';
 import { sair } from '../auth/session.js';
 
 const api = axios.create({
-    baseURL: 'http://localhost:8080/',
-    timeout: 15000,   // 15 segundos
+    baseURL: import.meta.env.VITE_API_URL || 'http://18.225.184.135:8080/',
+    timeout: 15000,
 });
 
-// Só estas rotas dispensam token. "/auth/cadastro-barbeiro" NÃO está aqui:
-// ela exige ADMIN, e antes o interceptor tirava o token dela.
 const ROTAS_PUBLICAS = ['/auth/login', '/auth/cadastro', '/auth/validar-codigo', '/auth/reenviar-codigo'];
-const ehPublica = (url) => ROTAS_PUBLICAS.includes(url);
+const ehPublica = (url) => ROTAS_PUBLICAS.includes(url);;
 
 api.interceptors.request.use((config) => {
     const token = localStorage.getItem('token');
