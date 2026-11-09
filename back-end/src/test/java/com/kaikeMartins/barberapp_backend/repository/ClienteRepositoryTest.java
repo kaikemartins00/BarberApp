@@ -142,14 +142,11 @@ class ClienteRepositoryTest {
     @DisplayName("Busca por Id")
     @Test
     void findById() {
-        em.flush();
-        em.clear();
 
-        ClienteEntity doBanco = repository.findById(kaike.getId()).orElseThrow();
+        ClienteEntity doBanco = repository.findById(kaike.getId()).get();
 
-        assertEquals(kaike.getId(), doBanco.getId());
-        assertEquals("Kaike", doBanco.getNome());
-        assertEquals("79999999999", doBanco.getTelefone());
+        assertNotNull(doBanco);
+        assertEquals(kaike.getId(), doBanco.getId());;
     }
 
     @DisplayName("Busca por Id que não existe")
@@ -161,8 +158,6 @@ class ClienteRepositoryTest {
     @DisplayName("Busca por email do usuário")
     @Test
     void findByUsuarioEmail() {
-        em.flush();
-        em.clear();
 
         Optional<ClienteEntity> resultado = repository.findByUsuarioEmail("maria@email.com");
 

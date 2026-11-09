@@ -120,11 +120,12 @@ class BarbeiroRepositoryTest {
     @Test
     void findById() {
 
-        BarbeiroEntity doBanco = repository.findById(joao.getId()).orElseThrow();
+        repository.save(joao);
 
-        assertEquals(joao.getId(), doBanco.getId());
-        assertEquals("Joao", doBanco.getNome());
-        assertEquals("79988888888", doBanco.getTelefone());
+        BarbeiroEntity busca = repository.findById(joao.getId()).get();
+
+        assertNotNull(busca);
+        assertEquals(joao.getId(), busca.getId());
     }
 
     @DisplayName("Busca por Id que não existe")

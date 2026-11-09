@@ -25,6 +25,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -97,14 +98,26 @@ public class ChamadoServiceTest {
     }
 
     private UsuarioEntity usuario(Long id, String role) {
-        return UsuarioEntity.builder().id(id).email("user" + id + "@email.com").senha("123456").verificado(true)
-                .roles(new HashSet<>(Set.of(RoleEntity.builder().name(role).build()))).build();
+        return UsuarioEntity.builder()
+                .id(id)
+                .email("user" + id + "@email.com")
+                .senha("123456")
+                .verificado(true)
+                .roles(new HashSet<>(Set.of(RoleEntity.builder().name(role).build())))
+                .build();
     }
 
     private ChamadoEntity chamado(Long id, ChamadoStatus status, UsuarioEntity responsavel) {
-        return ChamadoEntity.builder().id(id).titulo("Titulo " + id).descricao("Descricao " + id)
-                .status(status).prioridade(PrioridadeChamado.MEDIA).cliente(cliente).responsavel(responsavel)
-                .respostas(new ArrayList<>()).build();
+        return ChamadoEntity.builder()
+                .id(id)
+                .titulo("Titulo " + id)
+                .descricao("Descricao " + id)
+                .status(status)
+                .prioridade(PrioridadeChamado.MEDIA)
+                .cliente(cliente)
+                .responsavel(responsavel)
+                .respostas(new ArrayList<>())
+                .build();
     }
 
     private void autenticar(UsuarioEntity usuario) {
@@ -113,11 +126,9 @@ public class ChamadoServiceTest {
     }
 
     @Test
-    @DisplayName("Should let admin see all tickets")
+    @DisplayName("Deve permitir que o administrador veja todos os chamados")
     void findAllAdminSuccess() {
-
         autenticar(usuarioAdmin);
-
         when(chamadoRepository.findAllByOrderByChamadoDateDesc())
                 .thenReturn(List.of(chamadoAberto, chamadoEmAndamento, chamadoFinalizado));
 
@@ -130,14 +141,11 @@ public class ChamadoServiceTest {
     }
 
     @Test
-    @DisplayName("Should let barber see free tickets and own tickets only")
+    @DisplayName("Deve permitir que o barbeiro veja apenas os chamados livres e os dele")
     void findAllBarbeiroSuccess() {
-
         autenticar(usuarioBarbeiro);
-
         ChamadoEntity finalizadoDeOutro = chamado(14L, ChamadoStatus.FINALIZADO, usuarioOutroBarbeiro);
         ChamadoEntity finalizadoSemDono = chamado(15L, ChamadoStatus.FINALIZADO, null);
-
         when(chamadoRepository.findAllByOrderByChamadoDateDesc()).thenReturn(List.of(
                 chamadoAberto, chamadoEmAndamento, chamadoDeOutro, chamadoFinalizado,
                 finalizadoDeOutro, finalizadoSemDono));
@@ -148,11 +156,53 @@ public class ChamadoServiceTest {
     }
 
     @Test
-    @DisplayName("Should return tickets of the logged client")
+    @DisplayName("Deve retornar lista vazia quando não há chamados")
+    void findAllEmptySuccess() {
+        autenticar(usuarioAdmin);
+        when(chamadoRepository.findAllByOrderByChamadoDateDesc()).thenReturn(List.of());
+
+        List<ChamadoResponse> lista = chamadoService.findAll();
+
+        assertTrue(lista.isEmpty());
+    }
+
+    @Test
+    @DisplayName("Deve ordenar as respostas do chamado pela data de envio")
+    void findAllOrdersAnswersSuccess() {
+        autenticar(usuarioAdmin);
+        LocalDateTime agora = LocalDateTime.now();
+        RespostaChamadoEntity recente = RespostaChamadoEntity.builder()
+                .id(2L).respostaMsg("recente").dataEnvio(agora).chamado(chamadoAberto).build();
+        RespostaChamadoEntity antiga = RespostaChamadoEntity.builder()
+                .id(1L).respostaMsg("antiga").dataEnvio(agora.minusHours(1)).barbeiro(barbeiro).chamado(chamadoAberto).build();
+        chamadoAberto.getRespostas().add(recente);
+        chamadoAberto.getRespostas().add(antiga);
+        when(chamadoRepository.findAllByOrderByChamadoDateDesc()).thenReturn(List.of(chamadoAberto));
+
+        List<ChamadoResponse> lista = chamadoService.findAll();
+
+        assertEquals(List.of("antiga", "recente"),
+                lista.get(0).respostas().stream().map(r -> r.respostaMsg()).toList());
+        assertEquals("Joao", lista.get(0).respostas().get(0).autorNome());
+        assertEquals("Administração", lista.get(0).respostas().get(1).autorNome());
+        verifyNoInteractions(barbeiroRepository);
+    }
+
+    @Test
+    @DisplayName("Deve lançar ForbiddenException no findAll quando o principal não for um usuário")
+    void findAllUnauthenticatedError() {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("anonymousUser", null, List.of()));
+
+        assertThrows(ForbiddenException.class, () -> chamadoService.findAll());
+
+        verifyNoInteractions(chamadoRepository);
+    }
+
+    @Test
+    @DisplayName("Deve retornar os chamados do cliente logado")
     void meusSuccess() {
-
         autenticar(usuarioCliente);
-
         when(clienteRepository.findById(1L)).thenReturn(Optional.of(cliente));
         when(chamadoRepository.findByClienteIdOrderByChamadoDateDesc(1L)).thenReturn(List.of(chamadoAberto));
 
@@ -161,36 +211,47 @@ public class ChamadoServiceTest {
         assertEquals(1, lista.size());
         assertEquals("Kaike", lista.get(0).clienteNome());
         assertEquals("user1@email.com", lista.get(0).clienteEmail());
-
+        assertNull(lista.get(0).responsavelNome());
         verify(chamadoRepository).findByClienteIdOrderByChamadoDateDesc(1L);
     }
 
     @Test
-    @DisplayName("Should throw ForbiddenException when user is not a client on meus")
-    void meusNotClientError() {
+    @DisplayName("Deve retornar lista vazia quando o cliente não tem chamados")
+    void meusEmptySuccess() {
+        autenticar(usuarioCliente);
+        when(clienteRepository.findById(1L)).thenReturn(Optional.of(cliente));
+        when(chamadoRepository.findByClienteIdOrderByChamadoDateDesc(1L)).thenReturn(List.of());
 
-        autenticar(usuarioBarbeiro);
+        List<ChamadoResponse> lista = chamadoService.meus();
 
-        when(clienteRepository.findById(2L)).thenReturn(Optional.empty());
-
-        assertThrows(ForbiddenException.class, () -> chamadoService.meus());
+        assertTrue(lista.isEmpty());
     }
 
     @Test
-    @DisplayName("Should create ticket as ABERTO for the logged client")
+    @DisplayName("Deve lançar ForbiddenException quando o usuário não for cliente em meus")
+    void meusNotClientError() {
+        autenticar(usuarioBarbeiro);
+        when(clienteRepository.findById(2L)).thenReturn(Optional.empty());
+
+        assertThrows(ForbiddenException.class, () -> chamadoService.meus());
+
+        verifyNoInteractions(chamadoRepository);
+    }
+
+    @Test
+    @DisplayName("Deve criar o chamado como ABERTO para o cliente logado")
     void createSuccess() {
-
         autenticar(usuarioCliente);
-
         when(clienteRepository.findById(1L)).thenReturn(Optional.of(cliente));
         when(chamadoRepository.save(any(ChamadoEntity.class))).thenReturn(chamadoAberto);
 
         ChamadoResponse response = chamadoService.create(new ChamadoRequest("Duvida", "Como agendar?"));
 
         ArgumentCaptor<ChamadoEntity> captor = ArgumentCaptor.forClass(ChamadoEntity.class);
-
         verify(chamadoRepository).save(captor.capture());
 
+        assertEquals("Duvida", captor.getValue().getTitulo());
+        assertEquals("Como agendar?", captor.getValue().getDescricao());
         assertEquals(ChamadoStatus.ABERTO, captor.getValue().getStatus());
         assertEquals(PrioridadeChamado.BAIXA, captor.getValue().getPrioridade());
         assertSame(cliente, captor.getValue().getCliente());
@@ -198,47 +259,84 @@ public class ChamadoServiceTest {
     }
 
     @Test
-    @DisplayName("Should set ALTA priority when text mentions server")
-    void createHighPrioritySuccess() {
-
+    @DisplayName("Deve definir prioridade ALTA quando o título menciona servidor")
+    void createHighPriorityServerSuccess() {
         autenticar(usuarioCliente);
-
         when(clienteRepository.findById(1L)).thenReturn(Optional.of(cliente));
         when(chamadoRepository.save(any(ChamadoEntity.class))).thenReturn(chamadoAberto);
 
         chamadoService.create(new ChamadoRequest("O Servidor caiu", "ajuda"));
 
         ArgumentCaptor<ChamadoEntity> captor = ArgumentCaptor.forClass(ChamadoEntity.class);
-
         verify(chamadoRepository).save(captor.capture());
 
         assertEquals(PrioridadeChamado.ALTA, captor.getValue().getPrioridade());
     }
 
     @Test
-    @DisplayName("Should set MEDIA priority when text mentions bug")
-    void createMediumPrioritySuccess() {
-
+    @DisplayName("Deve definir prioridade ALTA quando a descrição menciona sistema fora")
+    void createHighPrioritySystemDownSuccess() {
         autenticar(usuarioCliente);
-
         when(clienteRepository.findById(1L)).thenReturn(Optional.of(cliente));
         when(chamadoRepository.save(any(ChamadoEntity.class))).thenReturn(chamadoAberto);
 
-        chamadoService.create(new ChamadoRequest("Problema", "Encontrei um BUG na tela"));
+        chamadoService.create(new ChamadoRequest("Problema", "O sistema fora do ar"));
 
         ArgumentCaptor<ChamadoEntity> captor = ArgumentCaptor.forClass(ChamadoEntity.class);
+        verify(chamadoRepository).save(captor.capture());
 
+        assertEquals(PrioridadeChamado.ALTA, captor.getValue().getPrioridade());
+    }
+
+    @Test
+    @DisplayName("Deve definir prioridade MEDIA quando o texto menciona lento")
+    void createMediumPrioritySlowSuccess() {
+        autenticar(usuarioCliente);
+        when(clienteRepository.findById(1L)).thenReturn(Optional.of(cliente));
+        when(chamadoRepository.save(any(ChamadoEntity.class))).thenReturn(chamadoAberto);
+
+        chamadoService.create(new ChamadoRequest("App lento", "ajuda"));
+
+        ArgumentCaptor<ChamadoEntity> captor = ArgumentCaptor.forClass(ChamadoEntity.class);
         verify(chamadoRepository).save(captor.capture());
 
         assertEquals(PrioridadeChamado.MEDIA, captor.getValue().getPrioridade());
     }
 
     @Test
-    @DisplayName("Should throw ForbiddenException when user is not a client on create")
+    @DisplayName("Deve definir prioridade MEDIA quando o texto menciona bug")
+    void createMediumPriorityBugSuccess() {
+        autenticar(usuarioCliente);
+        when(clienteRepository.findById(1L)).thenReturn(Optional.of(cliente));
+        when(chamadoRepository.save(any(ChamadoEntity.class))).thenReturn(chamadoAberto);
+
+        chamadoService.create(new ChamadoRequest("Problema", "Encontrei um BUG na tela"));
+
+        ArgumentCaptor<ChamadoEntity> captor = ArgumentCaptor.forClass(ChamadoEntity.class);
+        verify(chamadoRepository).save(captor.capture());
+
+        assertEquals(PrioridadeChamado.MEDIA, captor.getValue().getPrioridade());
+    }
+
+    @Test
+    @DisplayName("Deve priorizar ALTA quando o texto menciona servidor e bug")
+    void createHighPriorityOverMediumSuccess() {
+        autenticar(usuarioCliente);
+        when(clienteRepository.findById(1L)).thenReturn(Optional.of(cliente));
+        when(chamadoRepository.save(any(ChamadoEntity.class))).thenReturn(chamadoAberto);
+
+        chamadoService.create(new ChamadoRequest("Bug no servidor", "ajuda"));
+
+        ArgumentCaptor<ChamadoEntity> captor = ArgumentCaptor.forClass(ChamadoEntity.class);
+        verify(chamadoRepository).save(captor.capture());
+
+        assertEquals(PrioridadeChamado.ALTA, captor.getValue().getPrioridade());
+    }
+
+    @Test
+    @DisplayName("Deve lançar ForbiddenException quando o usuário não for cliente em create")
     void createNotClientError() {
-
         autenticar(usuarioBarbeiro);
-
         when(clienteRepository.findById(2L)).thenReturn(Optional.empty());
 
         assertThrows(ForbiddenException.class, () -> chamadoService.create(new ChamadoRequest("t", "d")));
@@ -247,11 +345,9 @@ public class ChamadoServiceTest {
     }
 
     @Test
-    @DisplayName("Should throw NotFoundException when assuming non-existent ticket")
+    @DisplayName("Deve lançar NotFoundException ao assumir um chamado inexistente")
     void assumirNotFoundError() {
-
         autenticar(usuarioBarbeiro);
-
         when(chamadoRepository.buscarParaAtualizar(99L)).thenReturn(Optional.empty());
 
         NotFoundException e = assertThrows(NotFoundException.class, () -> chamadoService.assumir(99L));
@@ -260,11 +356,9 @@ public class ChamadoServiceTest {
     }
 
     @Test
-    @DisplayName("Should throw BadRequestException when assuming finished ticket")
+    @DisplayName("Deve lançar BadRequestException ao assumir um chamado finalizado")
     void assumirFinishedError() {
-
         autenticar(usuarioBarbeiro);
-
         when(chamadoRepository.buscarParaAtualizar(13L)).thenReturn(Optional.of(chamadoFinalizado));
 
         BadRequestException e = assertThrows(BadRequestException.class, () -> chamadoService.assumir(13L));
@@ -273,11 +367,9 @@ public class ChamadoServiceTest {
     }
 
     @Test
-    @DisplayName("Should assume free ticket and move it to EM_ANDAMENTO")
+    @DisplayName("Deve assumir o chamado livre e movê-lo para EM_ANDAMENTO")
     void assumirSuccess() {
-
         autenticar(usuarioBarbeiro);
-
         when(chamadoRepository.buscarParaAtualizar(10L)).thenReturn(Optional.of(chamadoAberto));
         when(barbeiroRepository.findById(2L)).thenReturn(Optional.of(barbeiro));
 
@@ -291,11 +383,23 @@ public class ChamadoServiceTest {
     }
 
     @Test
-    @DisplayName("Should throw ForbiddenException when assuming ticket of another responsible")
-    void assumirOtherResponsibleError() {
-
+    @DisplayName("Deve manter o chamado EM_ANDAMENTO quando o próprio responsável assume de novo")
+    void assumirSameResponsibleSuccess() {
         autenticar(usuarioBarbeiro);
+        when(chamadoRepository.buscarParaAtualizar(11L)).thenReturn(Optional.of(chamadoEmAndamento));
+        when(barbeiroRepository.findById(2L)).thenReturn(Optional.of(barbeiro));
 
+        ChamadoResponse response = chamadoService.assumir(11L);
+
+        assertSame(usuarioBarbeiro, chamadoEmAndamento.getResponsavel());
+        assertEquals(ChamadoStatus.EM_ANDAMENTO, chamadoEmAndamento.getStatus());
+        assertTrue(response.podeAtender());
+    }
+
+    @Test
+    @DisplayName("Deve lançar ForbiddenException ao assumir chamado de outro responsável")
+    void assumirOtherResponsibleError() {
+        autenticar(usuarioBarbeiro);
         when(chamadoRepository.buscarParaAtualizar(12L)).thenReturn(Optional.of(chamadoDeOutro));
 
         assertThrows(ForbiddenException.class, () -> chamadoService.assumir(12L));
@@ -304,11 +408,9 @@ public class ChamadoServiceTest {
     }
 
     @Test
-    @DisplayName("Should let admin take ticket from another responsible")
+    @DisplayName("Deve permitir que o administrador tome o chamado de outro responsável")
     void assumirAdminSuccess() {
-
         autenticar(usuarioAdmin);
-
         when(chamadoRepository.buscarParaAtualizar(12L)).thenReturn(Optional.of(chamadoDeOutro));
 
         ChamadoResponse response = chamadoService.assumir(12L);
@@ -319,34 +421,59 @@ public class ChamadoServiceTest {
     }
 
     @Test
-    @DisplayName("Should answer ticket, assume it and return the barber name")
+    @DisplayName("Deve permitir que o administrador assuma um chamado livre")
+    void assumirAdminFreeSuccess() {
+        autenticar(usuarioAdmin);
+        when(chamadoRepository.buscarParaAtualizar(10L)).thenReturn(Optional.of(chamadoAberto));
+
+        ChamadoResponse response = chamadoService.assumir(10L);
+
+        assertSame(usuarioAdmin, chamadoAberto.getResponsavel());
+        assertEquals(ChamadoStatus.EM_ANDAMENTO, chamadoAberto.getStatus());
+        assertEquals("Administração", response.responsavelNome());
+        assertTrue(response.podeAtender());
+    }
+
+    @Test
+    @DisplayName("Deve responder o chamado, assumi-lo e retornar o nome do barbeiro")
     void responderSuccess() {
-
         autenticar(usuarioBarbeiro);
-
         when(chamadoRepository.buscarParaAtualizar(10L)).thenReturn(Optional.of(chamadoAberto));
         when(barbeiroRepository.findById(2L)).thenReturn(Optional.of(barbeiro));
 
         ChamadoResponse response = chamadoService.responder(10L, new RespostaChamRequest("Vou verificar"));
 
         ArgumentCaptor<RespostaChamadoEntity> captor = ArgumentCaptor.forClass(RespostaChamadoEntity.class);
-
         verify(respostaRepository).save(captor.capture());
 
         assertEquals("Vou verificar", captor.getValue().getRespostaMsg());
         assertSame(barbeiro, captor.getValue().getBarbeiro());
         assertSame(chamadoAberto, captor.getValue().getChamado());
+        assertSame(usuarioBarbeiro, chamadoAberto.getResponsavel());
         assertEquals(ChamadoStatus.EM_ANDAMENTO, chamadoAberto.getStatus());
         assertEquals(1, response.respostas().size());
         assertEquals("Joao", response.respostas().get(0).autorNome());
     }
 
     @Test
-    @DisplayName("Should show admin answer as Administração")
+    @DisplayName("Deve permitir que o responsável responda um chamado já em andamento")
+    void responderInProgressSuccess() {
+        autenticar(usuarioBarbeiro);
+        when(chamadoRepository.buscarParaAtualizar(11L)).thenReturn(Optional.of(chamadoEmAndamento));
+        when(barbeiroRepository.findById(2L)).thenReturn(Optional.of(barbeiro));
+
+        ChamadoResponse response = chamadoService.responder(11L, new RespostaChamRequest("Continuando"));
+
+        assertEquals(ChamadoStatus.EM_ANDAMENTO, chamadoEmAndamento.getStatus());
+        assertEquals(1, chamadoEmAndamento.getRespostas().size());
+        assertEquals("Continuando", response.respostas().get(0).respostaMsg());
+        verify(respostaRepository).save(any(RespostaChamadoEntity.class));
+    }
+
+    @Test
+    @DisplayName("Deve exibir a resposta do administrador como Administração")
     void responderAdminSuccess() {
-
         autenticar(usuarioAdmin);
-
         when(chamadoRepository.buscarParaAtualizar(10L)).thenReturn(Optional.of(chamadoAberto));
 
         ChamadoResponse response = chamadoService.responder(10L, new RespostaChamRequest("Resolvido"));
@@ -356,11 +483,21 @@ public class ChamadoServiceTest {
     }
 
     @Test
-    @DisplayName("Should throw BadRequestException when answering finished ticket")
-    void responderFinishedError() {
-
+    @DisplayName("Deve lançar NotFoundException ao responder um chamado inexistente")
+    void responderNotFoundError() {
         autenticar(usuarioBarbeiro);
+        when(chamadoRepository.buscarParaAtualizar(99L)).thenReturn(Optional.empty());
 
+        assertThrows(NotFoundException.class,
+                () -> chamadoService.responder(99L, new RespostaChamRequest("oi")));
+
+        verify(respostaRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Deve lançar BadRequestException ao responder um chamado finalizado")
+    void responderFinishedError() {
+        autenticar(usuarioBarbeiro);
         when(chamadoRepository.buscarParaAtualizar(13L)).thenReturn(Optional.of(chamadoFinalizado));
 
         assertThrows(BadRequestException.class,
@@ -370,27 +507,22 @@ public class ChamadoServiceTest {
     }
 
     @Test
-    @DisplayName("Should throw ForbiddenException when answering ticket of another responsible")
+    @DisplayName("Deve lançar ForbiddenException ao responder chamado de outro responsável")
     void responderOtherResponsibleError() {
-
         autenticar(usuarioBarbeiro);
-
         when(chamadoRepository.buscarParaAtualizar(12L)).thenReturn(Optional.of(chamadoDeOutro));
 
         ForbiddenException e = assertThrows(ForbiddenException.class,
                 () -> chamadoService.responder(12L, new RespostaChamRequest("oi")));
 
         assertThat(e.getMessage(), is("Esse chamado já está sendo atendido por Administração."));
-
         verify(respostaRepository, never()).save(any());
     }
 
     @Test
-    @DisplayName("Should finish ticket")
+    @DisplayName("Deve finalizar o chamado")
     void finalizarSuccess() {
-
         autenticar(usuarioBarbeiro);
-
         when(chamadoRepository.buscarParaAtualizar(11L)).thenReturn(Optional.of(chamadoEmAndamento));
         when(barbeiroRepository.findById(2L)).thenReturn(Optional.of(barbeiro));
 
@@ -402,26 +534,58 @@ public class ChamadoServiceTest {
     }
 
     @Test
-    @DisplayName("Should throw BadRequestException when finishing an already finished ticket")
-    void finalizarAlreadyFinishedError() {
+    @DisplayName("Deve permitir que o administrador finalize um chamado livre")
+    void finalizarAdminFreeSuccess() {
+        autenticar(usuarioAdmin);
+        when(chamadoRepository.buscarParaAtualizar(10L)).thenReturn(Optional.of(chamadoAberto));
 
-        autenticar(usuarioBarbeiro);
+        ChamadoResponse response = chamadoService.finalizar(10L);
 
-        when(chamadoRepository.buscarParaAtualizar(13L)).thenReturn(Optional.of(chamadoFinalizado));
-
-        assertThrows(BadRequestException.class, () -> chamadoService.finalizar(13L));
+        assertEquals(ChamadoStatus.FINALIZADO, chamadoAberto.getStatus());
+        assertSame(usuarioAdmin, chamadoAberto.getResponsavel());
+        assertEquals(ChamadoStatus.FINALIZADO, response.status());
     }
 
     @Test
-    @DisplayName("Should throw ForbiddenException when finishing ticket of another responsible")
-    void finalizarOtherResponsibleError() {
-
+    @DisplayName("Deve lançar NotFoundException ao finalizar um chamado inexistente")
+    void finalizarNotFoundError() {
         autenticar(usuarioBarbeiro);
+        when(chamadoRepository.buscarParaAtualizar(99L)).thenReturn(Optional.empty());
 
+        assertThrows(NotFoundException.class, () -> chamadoService.finalizar(99L));
+    }
+
+    @Test
+    @DisplayName("Deve lançar BadRequestException ao finalizar um chamado já finalizado")
+    void finalizarAlreadyFinishedError() {
+        autenticar(usuarioBarbeiro);
+        when(chamadoRepository.buscarParaAtualizar(13L)).thenReturn(Optional.of(chamadoFinalizado));
+
+        BadRequestException e = assertThrows(BadRequestException.class, () -> chamadoService.finalizar(13L));
+
+        assertThat(e.getMessage(), is("Esse chamado já foi finalizado."));
+    }
+
+    @Test
+    @DisplayName("Deve lançar ForbiddenException ao finalizar chamado de outro responsável")
+    void finalizarOtherResponsibleError() {
+        autenticar(usuarioBarbeiro);
         when(chamadoRepository.buscarParaAtualizar(12L)).thenReturn(Optional.of(chamadoDeOutro));
 
         assertThrows(ForbiddenException.class, () -> chamadoService.finalizar(12L));
 
+        assertEquals(ChamadoStatus.EM_ANDAMENTO, chamadoDeOutro.getStatus());
+    }
+
+    @Test
+    @DisplayName("Deve lançar ForbiddenException quando o administrador finaliza chamado de outro responsável")
+    void finalizarAdminOtherResponsibleError() {
+        autenticar(usuarioAdmin);
+        when(chamadoRepository.buscarParaAtualizar(12L)).thenReturn(Optional.of(chamadoDeOutro));
+
+        assertThrows(ForbiddenException.class, () -> chamadoService.finalizar(12L));
+
+        assertSame(usuarioOutroBarbeiro, chamadoDeOutro.getResponsavel());
         assertEquals(ChamadoStatus.EM_ANDAMENTO, chamadoDeOutro.getStatus());
     }
 }

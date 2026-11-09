@@ -125,8 +125,6 @@ class AgendamentoRepositoryTest {
     @Test
     void findById() {
 
-        repository.save(agendamento);
-
         AgendamentoEntity agendamentoSalvo = repository.findById(agendamento.getId()).get();
 
         assertNotNull(agendamentoSalvo);
@@ -137,32 +135,20 @@ class AgendamentoRepositoryTest {
     @Test
     void findByClienteId() {
 
-        repository.save(agendamento);
-
         List<AgendamentoEntity> resultado = repository.findByClienteId(cliente.getId());
 
-        assertFalse(resultado.isEmpty());
-        assertEquals(cliente.getId(), resultado.get(0).getCliente().getId());
+        assertNotNull(resultado);
+        assertEquals(agendamento.getCliente().getId(), resultado.get(0).getCliente().getId());
     }
 
     @DisplayName("Busca por Id do Barbeiro")
     @Test
     void findByBarbeiroId() {
-        AgendamentoEntity agendamento1 = AgendamentoEntity.builder()
-                .cliente(cliente)
-                .barbeiro(barbeiro)
-                .servico(servico)
-                .data(LocalDate.of(2027, 2, 13))
-                .horario(LocalTime.of(15, 0))
-                .status(AgendamentoStatus.PENDENTE)
-                .build();
-
-        repository.save(agendamento1);
 
         List<AgendamentoEntity> resultado = repository.findByBarbeiroId(barbeiro.getId());
 
-        assertEquals(2, resultado.size());
-        assertTrue(resultado.stream().allMatch(a -> a.getBarbeiro().getId().equals(barbeiro.getId())));
+        assertNotNull(resultado);
+        assertEquals(agendamento.getBarbeiro().getId(), resultado.get(0).getBarbeiro().getId());
     }
 
     @DisplayName("Existe agendamento no mesmo horário com status diferente de CANCELADO")

@@ -79,7 +79,6 @@ public class ServicoService {
                     "Não é possível excluir: já existem agendamentos com esse serviço.");
         }
 
-        // tira o serviço da lista de todos os barbeiros que o oferecem
         barbeiroRepository.findByServicosId(id)
                 .forEach(b -> b.getServicos().removeIf(s -> s.getId().equals(id)));
         barbeiroRepository.flush();

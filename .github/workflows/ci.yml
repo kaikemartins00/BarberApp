@@ -20,14 +20,51 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Compilar e rodar os testes unitários do Back-end
+      - name: Compilar e rodar os testes do Back-end
         working-directory: ./back-end
         env:
           TZ: "America/Sao_Paulo"
           SPRING_MAIL_HOST: localhost
           SPRING_MAIL_PORT: 25
           SPRING_DATASOURCE_URL: jdbc:h2:mem:testdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
-          SPRING_DATASOURCE_DRIVER-CLASS-NAME: org.h2.Driver
+          SPRING_DATASOURCE_DRIVERCLASSNAME: org.h2.Driver
+          SPRING_DATASOURCE_USERNAME: sa
+          SPRING_DATASOURCE_PASSWORD: ""
+          JWT_KEY: "chave-de-teste-com-pelo-menos-32-caracteres-123456"
+          SPRING_EMAIL: "teste@email.com"
+          SENHA_DE_APP: "senha-teste"
+          ADMIN_EMAIL: "admin@email.com"
+          ADMIN_PASSWORD: "admin123"
+          ADMIN_NAME: "Admin"
+          API_KEY: "mocked-api-key-for-test-purposes"
+          URL_GEMINI: "http://localhost"
+          AWS_REGION: "us-east-2"
           LANGCHAIN4J_GOOGLE_AI_GEMINI_API_KEY: "mocked-api-key-for-test-purposes"
           LANGCHAIN4J_GOOGLE_AI_GEMINI_MODEL_NAME: "gemini-1.5-flash"
         run: mvn -B clean verify
+
+  deploy:
+    needs: test-backend
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o código do repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar credenciais da AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login no Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build e push da imagem
+        working-directory: ./back-end
+        run: |
+          IMAGE=${{ secrets.IMAGE_REPO_URL }}
+          docker build -t $IMAGE:${{ github.sha }} -t $IMAGE:latest .
+          docker push $IMAGE:${{ github.sha }}
+          docker push $IMAGE:latest

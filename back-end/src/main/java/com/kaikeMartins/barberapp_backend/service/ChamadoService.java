@@ -57,7 +57,6 @@ public class ChamadoService {
                 respostas);
     }
 
-    /** Admin vê todos. Barbeiro vê os livres e os que ele atende (ou atendeu). */
     @Transactional(readOnly = true)
     public List<ChamadoResponse> findAll() {
         UsuarioEntity usuario = usuarioAutenticado();
@@ -87,7 +86,6 @@ public class ChamadoService {
         return toResponse(chamadoRepository.save(entity), usuarioAutenticado().getId());
     }
 
-    /** Assume o chamado. Admin pode tomar um chamado que está com outra pessoa. */
     public ChamadoResponse assumir(Long id) {
         UsuarioEntity usuario = usuarioAutenticado();
         ChamadoEntity chamado = buscarParaAtualizar(id);
@@ -143,8 +141,6 @@ public class ChamadoService {
         return toResponse(chamado, usuario.getId());
     }
 
-    // ---------- regras de visibilidade e de responsável ----------
-
     private boolean visivelPara(ChamadoEntity chamado, Long usuarioId) {
         UsuarioEntity responsavel = chamado.getResponsavel();
         boolean ehDele = responsavel != null && responsavel.getId().equals(usuarioId);
@@ -163,7 +159,6 @@ public class ChamadoService {
         }
     }
 
-    /** Barra quem não é o responsável. Chamado sem responsável fica livre para quem chegar primeiro. */
     private void exigirResponsavel(ChamadoEntity chamado, UsuarioEntity usuario) {
         UsuarioEntity atual = chamado.getResponsavel();
         if (atual != null && !atual.getId().equals(usuario.getId())) {
@@ -178,8 +173,6 @@ public class ChamadoService {
                 .map(BarbeiroEntity::getNome)
                 .orElse("Administração");
     }
-
-    // ---------- apoio ----------
 
     private ChamadoEntity buscarParaAtualizar(Long id) {
         return chamadoRepository.buscarParaAtualizar(id)

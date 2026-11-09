@@ -51,7 +51,6 @@ public class ConversaService {
                 .toList();
     }
 
-    /** Inicia a conversa com o barbeiro. Se já existir (mesmo finalizada), reaproveita e reabre. */
     public ConversaResponse iniciar(ConversaRequest request) {
         UsuarioEntity usuario = usuarioAutenticado();
 
@@ -108,7 +107,6 @@ public class ConversaService {
         mensagemRepository.marcarComoLidas(conversaId, usuario.getId());
     }
 
-    /** Cliente ou barbeiro podem finalizar. A conversa vira somente leitura. */
     public ConversaResponse finalizar(Long conversaId) {
         UsuarioEntity usuario = usuarioAutenticado();
         ConversaEntity conversa = buscarComoParticipante(conversaId, usuario.getId());
@@ -121,7 +119,6 @@ public class ConversaService {
         return toResponse(conversa, usuario.getId());
     }
 
-    /** Só o cliente reabre uma conversa finalizada. */
     public ConversaResponse reabrir(Long conversaId) {
         UsuarioEntity usuario = usuarioAutenticado();
         ConversaEntity conversa = buscarComoParticipante(conversaId, usuario.getId());
@@ -185,4 +182,6 @@ public class ConversaService {
     private boolean temRole(UsuarioEntity usuario, String role) {
         return usuario.getRoles().stream().anyMatch(r -> role.equals(r.getAuthority()));
     }
+
+
 }
