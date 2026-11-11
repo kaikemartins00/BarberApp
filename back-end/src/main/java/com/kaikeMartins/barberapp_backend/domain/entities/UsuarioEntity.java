@@ -5,6 +5,7 @@ import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.HashSet;
@@ -32,6 +33,18 @@ public class UsuarioEntity implements UserDetails {
     private boolean verificado;
     private String codigoVerificacao;
     private LocalDateTime codigoExpiracao;
+
+    private String codigoRedefinicao;
+    private LocalDateTime redefinicaoExpiraEm;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private int emailsEnviadosHoje = 0;
+
+    private LocalDate dataContagemEmails;
+
+    @Column(nullable = false, columnDefinition = "integer default 0")
+    private int tentativasRedefinicao;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
@@ -65,4 +78,3 @@ public class UsuarioEntity implements UserDetails {
         return this.verificado;
     }
 }
-

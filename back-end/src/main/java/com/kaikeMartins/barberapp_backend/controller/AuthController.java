@@ -46,4 +46,16 @@ public class AuthController {
         service.reenviarCodigo(email);
     }
 
+    @PostMapping("/esqueci-senha")
+    @ResponseStatus(HttpStatus.OK)
+    public void esqueciSenha(@Valid @RequestBody EsqueciSenhaRequest request) {
+        service.solicitarRedefinicao(request.email());
+    }
+
+    @PostMapping("/redefinir-senha")
+    @ResponseStatus(HttpStatus.OK)
+    public void redefinirSenha(@Valid @RequestBody RedefinirSenhaRequest request) {
+        service.redefinirSenha(request);
+    }
+
 }

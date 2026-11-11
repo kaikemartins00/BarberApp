@@ -24,7 +24,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -33,6 +35,15 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class AuthService {
+
+    private static final int VALIDADE_REDEFINICAO_MINUTOS = 10;
+    private static final int INTERVALO_ENTRE_PEDIDOS_SEGUNDOS = 60;
+    private static final int MAX_TENTATIVAS_REDEFINICAO = 5;
+    private static final String MSG_CODIGO_INVALIDO = "Código inválido ou expirado. Solicite um novo código.";
+    private static final int MAX_EMAILS_POR_DIA = 3;
+
+    private static final ZoneId FUSO_BRASIL =
+            ZoneId.of("America/Sao_Paulo");
 
     private final ClienteRepository clienteRepository;
     private final BarbeiroRepository barbeiroRepository;
@@ -105,6 +116,8 @@ public class AuthService {
                 .telefone(dto.telefone())
                 .build());
 
+        verificarLimiteEmail(usuario);
+
         emailService.enviarCodigo(dto.email(), codigo);
     }
 
@@ -133,6 +146,7 @@ public class AuthService {
 
     @Transactional
     public void reenviarCodigo(String email) {
+
         UsuarioEntity usuario = usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new NotFoundException("Cliente não encontrado"));
 
@@ -140,20 +154,123 @@ public class AuthService {
             throw new BadRequestException("Conta já verificada.");
         }
 
+        verificarLimiteEmail(usuario);
+
         String codigo = gerarCodigo();
+
         usuario.setCodigoVerificacao(codigo);
         usuario.setCodigoExpiracao(LocalDateTime.now().plusMinutes(5));
+
         usuarioRepository.save(usuario);
 
         emailService.enviarCodigo(email, codigo);
     }
 
+    @Transactional
+    public void solicitarRedefinicao(String email) {
+        Optional<UsuarioEntity> encontrado = usuarioRepository.findByEmail(email.trim());
+        if (encontrado.isEmpty()) {
+            return;
+        }
+
+        UsuarioEntity usuario = encontrado.get();
+        LocalDateTime agora = LocalDateTime.now();
+
+        if (usuario.getRedefinicaoExpiraEm() != null) {
+            LocalDateTime emitidoEm = usuario.getRedefinicaoExpiraEm().minusMinutes(VALIDADE_REDEFINICAO_MINUTOS);
+            if (emitidoEm.plusSeconds(INTERVALO_ENTRE_PEDIDOS_SEGUNDOS).isAfter(agora)) {
+                return;
+            }
+        }
+
+        verificarLimiteEmail(usuario);
+
+        String codigo = gerarCodigo();
+        usuario.setCodigoRedefinicao(passwordEncoder.encode(codigo));
+        usuario.setRedefinicaoExpiraEm(agora.plusMinutes(VALIDADE_REDEFINICAO_MINUTOS));
+        usuario.setTentativasRedefinicao(0);
+        usuarioRepository.save(usuario);
+
+        emailService.enviarCodigoRedefinicao(usuario.getEmail(), codigo);
+    }
+
+    private void verificarLimiteEmail(UsuarioEntity usuario) {
+
+        LocalDate hoje = LocalDate.now(FUSO_BRASIL);
+
+        if (usuario.getDataContagemEmails() == null
+                || !usuario.getDataContagemEmails().equals(hoje)) {
+
+            usuario.setEmailsEnviadosHoje(0);
+            usuario.setDataContagemEmails(hoje);
+        }
+
+        if (usuario.getEmailsEnviadosHoje() >= MAX_EMAILS_POR_DIA) {
+            throw new BadRequestException(
+                    "Você atingiu o limite de 3 e-mails por dia. Tente novamente amanhã."
+            );
+        }
+
+        usuario.setEmailsEnviadosHoje(
+                usuario.getEmailsEnviadosHoje() + 1
+        );
+
+        usuarioRepository.save(usuario);
+    }
+
+    @Transactional(noRollbackFor = BadRequestException.class)
+    public void redefinirSenha(RedefinirSenhaRequest dto) {
+        UsuarioEntity usuario = usuarioRepository.findByEmail(dto.email().trim())
+                .orElseThrow(() -> new BadRequestException(MSG_CODIGO_INVALIDO));
+
+        if (usuario.getCodigoRedefinicao() == null
+                || usuario.getRedefinicaoExpiraEm() == null
+                || usuario.getRedefinicaoExpiraEm().isBefore(LocalDateTime.now())) {
+            throw new BadRequestException(MSG_CODIGO_INVALIDO);
+        }
+
+        if (!passwordEncoder.matches(dto.codigo().trim(), usuario.getCodigoRedefinicao())) {
+            int tentativas = usuario.getTentativasRedefinicao() + 1;
+
+            if (tentativas >= MAX_TENTATIVAS_REDEFINICAO) {
+                limparRedefinicao(usuario);
+            } else {
+                usuario.setTentativasRedefinicao(tentativas);
+            }
+            usuarioRepository.save(usuario);
+
+            throw new BadRequestException(MSG_CODIGO_INVALIDO);
+        }
+
+        usuario.setSenha(passwordEncoder.encode(dto.novaSenha()));
+        limparRedefinicao(usuario);
+        usuarioRepository.save(usuario);
+    }
+
+    private void limparRedefinicao(UsuarioEntity usuario) {
+        usuario.setCodigoRedefinicao(null);
+        usuario.setRedefinicaoExpiraEm(null);
+        usuario.setTentativasRedefinicao(0);
+    }
+
     @Transactional(readOnly = true)
     public TokenResponse login(LoginRequest request) {
-            Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.email(), request.senha()));
 
-        UsuarioEntity usuario = (UsuarioEntity) authentication.getPrincipal();
+        UsuarioEntity usuario = usuarioRepository.findByEmail(request.email().trim())
+                .orElseThrow(() -> new NotFoundException("E-mail não cadastrado."));
+
+        Authentication authentication;
+
+        try {
+            authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            usuario.getEmail(),
+                            request.senha()
+                    )
+            );
+        } catch (org.springframework.security.authentication.BadCredentialsException e) {
+            throw new BadRequestException("Senha incorreta.");
+        }
 
         List<String> roles = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
@@ -161,8 +278,7 @@ public class AuthService {
 
         String token = tokenProvider.generateToken(authentication);
 
-        return new TokenResponse(token, expirationTime, usuario.getId(),  roles);
-
+        return new TokenResponse(token, expirationTime, usuario.getId(), roles);
     }
 
     private String gerarCodigo() {

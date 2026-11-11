@@ -41,3 +41,7 @@ admin:
 gemini:
   api_key: ${API_KEY}
   url: ${URL_GEMINI}
+
+logging:
+  level:
+    dev.langchain4j.service.ToolErrorHandlingNotice: "OFF"

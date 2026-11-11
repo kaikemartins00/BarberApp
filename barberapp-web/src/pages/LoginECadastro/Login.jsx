@@ -1,11 +1,9 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import api from '../../api/api.js';
 import { salvarSessao, telaInicial } from '../../auth/session.js';
 import AuthLayout from "../../components/AuthLayout.jsx";
 
-// O backend precisa responder de forma DIFERENTE quando a conta não foi verificada
-// (ex.: status 403 com a mensagem "conta não verificada").
 function contaNaoVerificada(error) {
   const status = error.response?.status;
   const mensagem = error.response?.data?.message || '';
@@ -18,6 +16,8 @@ function Login() {
   const [erro, setErro] = useState('');
   const [carregando, setCarregando] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const senhaAlterada = location.state?.senhaAlterada;
 
   async function handleLogin(event) {
     event.preventDefault();
@@ -35,7 +35,10 @@ function Login() {
         navigate('/verificar-conta', { state: { email } });
         return;
       }
-      setErro('Email ou senha inválidos');
+
+      const mensagem = error.response?.data?.message;
+
+      setErro(mensagem || 'Não foi possível realizar o login. Tente novamente.');
     } finally {
       setCarregando(false);
     }
@@ -44,6 +47,10 @@ function Login() {
   return (
       <AuthLayout titulo="Entrar" subtitulo="Acesse sua conta para continuar.">
         <form className="form" onSubmit={handleLogin}>
+          {senhaAlterada && (
+              <p className="alert alert--ok">Senha alterada! Entre com a nova senha.</p>
+          )}
+
           <label className="field">
             <span>Email</span>
             <input type="email" placeholder="voce@email.com" value={email}
@@ -65,6 +72,7 @@ function Login() {
 
         <div className="auth__rodape">
           <span>Não tem conta? <Link to="/cadastro">Cadastrar</Link></span>
+          <span>Esqueceu a senha? <Link to="/esqueci-senha" state={{ email }}>Redefinir</Link></span>
           {email && (
               <span>
             Primeiro acesso? <Link to="/verificar-conta" state={{ email }}>Verificar conta</Link>

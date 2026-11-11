@@ -50,6 +50,32 @@ public class EmailService {
     }
 
     @Async
+    public void enviarCodigoRedefinicao(String destino, String codigo) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(remetente);
+            message.setTo(destino);
+            message.setSubject("Redefinição de senha - BarberApp");
+
+            message.setText(
+                    "Olá!\n\n" +
+                            "Recebemos um pedido para redefinir a senha da sua conta.\n" +
+                            "Seu código é:\n\n" +
+                            codigo +
+                            "\n\nEste código expira em 10 minutos.\n\n" +
+                            "Se você não pediu a redefinição, ignore este e-mail: sua senha continua a mesma.\n\n" +
+                            "Equipe BarberApp."
+            );
+
+            mailSender.send(message);
+            log.info("E-mail de redefinição de senha enviado para: {}", destino);
+
+        } catch (MailException e) {
+            log.error("Falha ao enviar e-mail de redefinição para {}. Erro: {}", destino, e.getMessage());
+        }
+    }
+
+    @Async
     public void enviarCancelamento(AvisoCancelamento aviso) {
         try {
             String motivo = (aviso.motivo() == null || aviso.motivo().isBlank())

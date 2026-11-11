@@ -2,13 +2,18 @@ import axios from 'axios';
 import { sair } from '../auth/session.js';
 
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || 'http://18.224.93.254:8080/',
+    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080',
     timeout: 15000
 });
 
-
-
-const ROTAS_PUBLICAS = ['/auth/login', '/auth/cadastro', '/auth/validar-codigo', '/auth/reenviar-codigo'];
+const ROTAS_PUBLICAS = [
+    '/auth/login',
+    '/auth/cadastro',
+    '/auth/validar-codigo',
+    '/auth/reenviar-codigo',
+    '/auth/esqueci-senha',
+    '/auth/redefinir-senha',
+];
 const ehPublica = (url) => ROTAS_PUBLICAS.includes(url);
 
 api.interceptors.request.use((config) => {

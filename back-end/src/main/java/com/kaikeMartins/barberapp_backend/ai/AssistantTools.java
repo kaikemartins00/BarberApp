@@ -2,12 +2,15 @@ package com.kaikeMartins.barberapp_backend.ai;
 
 import com.kaikeMartins.barberapp_backend.dto.AgendamentoRequest;
 import com.kaikeMartins.barberapp_backend.exception.BadRequestException;
+import com.kaikeMartins.barberapp_backend.exception.ForbiddenException;
+import com.kaikeMartins.barberapp_backend.exception.NotFoundException;
 import com.kaikeMartins.barberapp_backend.repository.BarbeiroRepository;
 import com.kaikeMartins.barberapp_backend.repository.ServicoRepository;
 import com.kaikeMartins.barberapp_backend.service.AgendamentoService;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.agent.tool.ToolMemoryId;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
@@ -15,6 +18,7 @@ import java.time.LocalTime;
 import java.time.format.DateTimeParseException;
 import java.util.Map;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class AssistantTools {
@@ -31,6 +35,10 @@ public class AssistantTools {
 
     @Tool("Retorna o preço de um serviço da barbearia (corte, barba ou corte e barba)")
     public String getServicePrice(String service) {
+        if (service == null || service.isBlank()) {
+            return "Informe o nome do serviço. Serviços disponíveis: " + SERVICE_PRICES.keySet();
+        }
+
         Double price = SERVICE_PRICES.get(service.trim().toLowerCase());
 
         if (price == null) {
@@ -52,8 +60,11 @@ public class AssistantTools {
             return "Agendamento confirmado.";
         } catch (DateTimeParseException e) {
             return "Data ou hora em formato inválido. Use yyyy-MM-dd e HH:mm.";
-        } catch (BadRequestException e) {
+        } catch (BadRequestException | NotFoundException | ForbiddenException e) {
             return "Não foi possível agendar: " + e.getMessage();
+        } catch (RuntimeException e) {
+            log.error("Erro inesperado ao agendar pelo assistente (cliente {})", userId, e);
+            return "Não consegui concluir o agendamento agora. Tente novamente em instantes.";
         }
     }
 

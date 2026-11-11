@@ -858,3 +858,30 @@ a.btn:hover {
 .msgs__aviso .btn {
     margin-top: 10px;
 }
+
+.balao--erro {
+    color: var(--danger);
+    background: rgba(255, 138, 128, .08);
+    border-color: rgba(255, 138, 128, .35);
+}
+
+.balao--digitando {
+    color: var(--muted);
+    font-style: italic;
+}
+
+.chamado__topo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+
+.chamado__resposta {
+    margin: 8px 0 0;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+}
