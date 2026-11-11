@@ -60,6 +60,12 @@ function EsqueciSenha() {
             return;
         }
 
+        const senhaForteRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,}$/;
+        if (!senhaForteRegex.test(novaSenha)) {
+            setErro('A senha deve ter no mínimo 6 caracteres, com pelo menos uma letra maiúscula, uma minúscula e um número.');
+            return;
+        }
+
         if (novaSenha !== confirmarSenha) {
             setErro('As senhas não coincidem.');
             return;

@@ -15,6 +15,13 @@ function Cadastro() {
   async function handleCadastro(event) { // Função assíncrona para lidar com o envio do formulário de cadastro
     event.preventDefault(); // Impede o comportamento padrão do navegador de recarregar a página ao enviar o formulário
     setErro('');
+
+    const senhaForteRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,}$/;
+    if (!senhaForteRegex.test(senha)) {
+      setErro("A senha deve ter no mínimo 6 caracteres, com pelo menos uma letra maiúscula, uma minúscula e um número.");
+      return;
+    }
+
     setCarregando(true);
 
     try {
