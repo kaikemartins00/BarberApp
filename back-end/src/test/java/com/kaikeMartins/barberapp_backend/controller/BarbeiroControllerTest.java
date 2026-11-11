@@ -78,7 +78,7 @@ class BarbeiroControllerTest {
         url = "/barbeiros";
         LocalDate amanha = LocalDate.now().plusDays(1);
 
-        updateRequest = new BarbeiroUpdateRequest("joao@email.com", "novaSenha", "http://foto.com/j.jpg");
+        updateRequest = new BarbeiroUpdateRequest("joao@email.com", "1novaSenha", "http://foto.com/j.jpg");
         servicosRequest = new ServicosIdsRequest(List.of(1L, 2L));
         horariosRequest = new HorariosRequest(List.of(
                 LocalDateTime.of(amanha, LocalTime.of(9, 0)),

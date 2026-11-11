@@ -65,9 +65,9 @@ class AuthControllerTest {
     void setUp() throws JsonProcessingException {
         mockMvc = MockMvcBuilders.standaloneSetup(controller).alwaysDo(print()).build();
         url = "/auth";
-        barbeiroRequest = new BarbeiroRequest("Joao", "joao@email.com", "123456", "79988888888", null);
-        cadastroRequest = new CadastroRequest("Kaike", "kaike@email.com", "123456", "79999999999");
-        loginRequest = new LoginRequest("kaike@email.com", "123456");
+        barbeiroRequest = new BarbeiroRequest("Joao", "joao@email.com", "Ee123456", "79988888888", null);
+        cadastroRequest = new CadastroRequest("Kaike", "kaike@email.com", "Ee123456", "79999999999");
+        loginRequest = new LoginRequest("kaike@email.com", "Ee123456");
         validarCodigoRequest = new ValidarCodigoRequest("kaike@email.com", "123456");
         tokenResponse = new TokenResponse("jwt-token", 3600000L, 1L, List.of("ROLE_CLIENTE"));
         jsonBarbeiro = objectMapper.writeValueAsString(barbeiroRequest);
