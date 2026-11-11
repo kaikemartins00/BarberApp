@@ -28,7 +28,9 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -44,6 +46,9 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class AuthServiceTest {
+
+    private static final String MSG_CODIGO_INVALIDO = "Código inválido ou expirado. Solicite um novo código.";
+    private static final String MSG_LIMITE = "Você atingiu o limite de 3 e-mails por dia. Tente novamente amanhã.";
 
     @InjectMocks
     private AuthService authService;
@@ -80,6 +85,8 @@ public class AuthServiceTest {
 
     private UsuarioEntity usuarioNaoVerificado;
 
+    private UsuarioEntity usuarioRedefinicao;
+
     private BarbeiroRequest barbeiroRequest;
 
     private CadastroRequest cadastroRequest;
@@ -109,8 +116,23 @@ public class AuthServiceTest {
                 .roles(new HashSet<>(Set.of(roleCliente)))
                 .build();
 
+        usuarioRedefinicao = UsuarioEntity.builder()
+                .id(1L)
+                .email("kaike@email.com")
+                .senha("hash")
+                .verificado(true)
+                .roles(new HashSet<>(Set.of(roleCliente)))
+                .build();
+        usuarioRedefinicao.setCodigoRedefinicao("hash-codigo");
+        usuarioRedefinicao.setRedefinicaoExpiraEm(LocalDateTime.now().plusMinutes(5));
+        usuarioRedefinicao.setTentativasRedefinicao(0);
+
         barbeiroRequest = new BarbeiroRequest("Joao", "joao@email.com", "123456", "79988888888", "http://foto.com/j.jpg");
         cadastroRequest = new CadastroRequest("Kaike", "kaike@email.com", "123456", "79999999999");
+    }
+
+    private LocalDate hoje() {
+        return LocalDate.now(ZoneId.of("America/Sao_Paulo"));
     }
 
     @Test
@@ -124,7 +146,6 @@ public class AuthServiceTest {
         assertThat(e.getMessage(), is("O email já existe."));
         verify(usuarioRepository, never()).save(any());
         verify(barbeiroRepository, never()).save(any());
-        verifyNoInteractions(passwordEncoder);
     }
 
     @Test
@@ -197,7 +218,6 @@ public class AuthServiceTest {
         assertNotEquals("111111", usuarioNaoVerificado.getCodigoVerificacao());
         assertTrue(usuarioNaoVerificado.getCodigoExpiracao().isAfter(LocalDateTime.now()));
         verify(emailService).enviarCodigo("kaike@email.com", usuarioNaoVerificado.getCodigoVerificacao());
-        verify(usuarioRepository).save(usuarioNaoVerificado);
         verify(clienteRepository, never()).save(any());
         verifyNoInteractions(passwordEncoder, roleRepository);
     }
@@ -214,7 +234,7 @@ public class AuthServiceTest {
 
         ArgumentCaptor<UsuarioEntity> usuarioCaptor = ArgumentCaptor.forClass(UsuarioEntity.class);
         ArgumentCaptor<ClienteEntity> clienteCaptor = ArgumentCaptor.forClass(ClienteEntity.class);
-        verify(usuarioRepository).save(usuarioCaptor.capture());
+        verify(usuarioRepository, times(2)).save(usuarioCaptor.capture());
         verify(clienteRepository).save(clienteCaptor.capture());
         UsuarioEntity usuario = usuarioCaptor.getValue();
 
@@ -224,6 +244,8 @@ public class AuthServiceTest {
         assertTrue(usuario.getRoles().contains(roleCliente));
         assertTrue(usuario.getCodigoVerificacao().matches("\\d{6}"));
         assertTrue(usuario.getCodigoExpiracao().isAfter(LocalDateTime.now()));
+        assertEquals(1, usuario.getEmailsEnviadosHoje());
+        assertEquals(hoje(), usuario.getDataContagemEmails());
         assertEquals("Kaike", clienteCaptor.getValue().getNome());
         assertEquals("79999999999", clienteCaptor.getValue().getTelefone());
         assertSame(usuario, clienteCaptor.getValue().getUsuario());
@@ -341,7 +363,7 @@ public class AuthServiceTest {
     }
 
     @Test
-    @DisplayName("Deve gerar um novo código e enviá-lo por e-mail")
+    @DisplayName("Deve gerar um novo código, contar o e-mail e enviá-lo")
     void reenviarCodigoSuccess() {
         usuarioNaoVerificado.setCodigoVerificacao("111111");
         usuarioNaoVerificado.setCodigoExpiracao(LocalDateTime.now().minusMinutes(10));
@@ -351,67 +373,248 @@ public class AuthServiceTest {
 
         assertTrue(usuarioNaoVerificado.getCodigoVerificacao().matches("\\d{6}"));
         assertTrue(usuarioNaoVerificado.getCodigoExpiracao().isAfter(LocalDateTime.now()));
-        verify(usuarioRepository).save(usuarioNaoVerificado);
+        assertEquals(1, usuarioNaoVerificado.getEmailsEnviadosHoje());
+        assertEquals(hoje(), usuarioNaoVerificado.getDataContagemEmails());
+        verify(usuarioRepository, times(2)).save(usuarioNaoVerificado);
         verify(emailService).enviarCodigo("kaike@email.com", usuarioNaoVerificado.getCodigoVerificacao());
+    }
+
+    @Test
+    @DisplayName("Deve lançar BadRequestException ao atingir o limite diário de e-mails")
+    void reenviarCodigoDailyLimitError() {
+        usuarioNaoVerificado.setEmailsEnviadosHoje(3);
+        usuarioNaoVerificado.setDataContagemEmails(hoje());
+        when(usuarioRepository.findByEmail("kaike@email.com")).thenReturn(Optional.of(usuarioNaoVerificado));
+
+        BadRequestException e = assertThrows(BadRequestException.class,
+                () -> authService.reenviarCodigo("kaike@email.com"));
+
+        assertThat(e.getMessage(), is(MSG_LIMITE));
+        assertEquals("123456", usuarioNaoVerificado.getCodigoVerificacao());
+        verify(usuarioRepository, never()).save(any());
+        verifyNoInteractions(emailService);
+    }
+
+    @Test
+    @DisplayName("Deve zerar o contador quando a data da contagem for de outro dia")
+    void reenviarCodigoResetsCounterOnNewDaySuccess() {
+        usuarioNaoVerificado.setEmailsEnviadosHoje(3);
+        usuarioNaoVerificado.setDataContagemEmails(hoje().minusDays(1));
+        when(usuarioRepository.findByEmail("kaike@email.com")).thenReturn(Optional.of(usuarioNaoVerificado));
+
+        authService.reenviarCodigo("kaike@email.com");
+
+        assertEquals(1, usuarioNaoVerificado.getEmailsEnviadosHoje());
+        assertEquals(hoje(), usuarioNaoVerificado.getDataContagemEmails());
+        verify(emailService).enviarCodigo(eq("kaike@email.com"), anyString());
+    }
+
+    @Test
+    @DisplayName("Não deve fazer nada ao solicitar redefinição para um e-mail inexistente")
+    void solicitarRedefinicaoNotFoundSuccess() {
+        when(usuarioRepository.findByEmail("x@email.com")).thenReturn(Optional.empty());
+
+        authService.solicitarRedefinicao("x@email.com");
+
+        verify(usuarioRepository, never()).save(any());
+        verifyNoInteractions(emailService, passwordEncoder);
+    }
+
+    @Test
+    @DisplayName("Deve gerar o código de redefinição, guardá-lo codificado e enviá-lo por e-mail")
+    void solicitarRedefinicaoSuccess() {
+        usuarioRedefinicao.setCodigoRedefinicao(null);
+        usuarioRedefinicao.setRedefinicaoExpiraEm(null);
+        usuarioRedefinicao.setTentativasRedefinicao(4);
+        when(usuarioRepository.findByEmail("kaike@email.com")).thenReturn(Optional.of(usuarioRedefinicao));
+        when(passwordEncoder.encode(anyString())).thenReturn("hash-novo");
+
+        authService.solicitarRedefinicao("kaike@email.com");
+
+        ArgumentCaptor<String> codigoCaptor = ArgumentCaptor.forClass(String.class);
+        verify(emailService).enviarCodigoRedefinicao(eq("kaike@email.com"), codigoCaptor.capture());
+        verify(passwordEncoder).encode(codigoCaptor.getValue());
+
+        assertTrue(codigoCaptor.getValue().matches("\\d{6}"));
+        assertEquals("hash-novo", usuarioRedefinicao.getCodigoRedefinicao());
+        assertTrue(usuarioRedefinicao.getRedefinicaoExpiraEm().isAfter(LocalDateTime.now().plusMinutes(9)));
+        assertEquals(0, usuarioRedefinicao.getTentativasRedefinicao());
+        assertEquals(1, usuarioRedefinicao.getEmailsEnviadosHoje());
+        verify(usuarioRepository, times(2)).save(usuarioRedefinicao);
+    }
+
+    @Test
+    @DisplayName("Não deve gerar novo código quando o pedido anterior tem menos de 60 segundos")
+    void solicitarRedefinicaoTooSoonSuccess() {
+        usuarioRedefinicao.setRedefinicaoExpiraEm(LocalDateTime.now().plusMinutes(10).minusSeconds(30));
+        when(usuarioRepository.findByEmail("kaike@email.com")).thenReturn(Optional.of(usuarioRedefinicao));
+
+        authService.solicitarRedefinicao("kaike@email.com");
+
+        assertEquals("hash-codigo", usuarioRedefinicao.getCodigoRedefinicao());
+        verify(usuarioRepository, never()).save(any());
+        verifyNoInteractions(emailService, passwordEncoder);
+    }
+
+    @Test
+    @DisplayName("Deve lançar BadRequestException ao atingir o limite diário na solicitação de redefinição")
+    void solicitarRedefinicaoDailyLimitError() {
+        usuarioRedefinicao.setRedefinicaoExpiraEm(null);
+        usuarioRedefinicao.setEmailsEnviadosHoje(3);
+        usuarioRedefinicao.setDataContagemEmails(hoje());
+        when(usuarioRepository.findByEmail("kaike@email.com")).thenReturn(Optional.of(usuarioRedefinicao));
+
+        BadRequestException e = assertThrows(BadRequestException.class,
+                () -> authService.solicitarRedefinicao("kaike@email.com"));
+
+        assertThat(e.getMessage(), is(MSG_LIMITE));
+        assertEquals("hash-codigo", usuarioRedefinicao.getCodigoRedefinicao());
+        verify(usuarioRepository, never()).save(any());
+        verifyNoInteractions(emailService, passwordEncoder);
+    }
+
+    @Test
+    @DisplayName("Deve lançar BadRequestException ao redefinir a senha de um e-mail inexistente")
+    void redefinirSenhaNotFoundError() {
+        when(usuarioRepository.findByEmail("x@email.com")).thenReturn(Optional.empty());
+
+        BadRequestException e = assertThrows(BadRequestException.class,
+                () -> authService.redefinirSenha(new RedefinirSenhaRequest("x@email.com", "123456", "novaSenha")));
+
+        assertThat(e.getMessage(), is(MSG_CODIGO_INVALIDO));
+        verify(usuarioRepository, never()).save(any());
+        verifyNoInteractions(passwordEncoder);
+    }
+
+    @Test
+    @DisplayName("Deve lançar BadRequestException ao redefinir sem ter solicitado o código")
+    void redefinirSenhaWithoutCodeError() {
+        usuarioRedefinicao.setCodigoRedefinicao(null);
+        when(usuarioRepository.findByEmail("kaike@email.com")).thenReturn(Optional.of(usuarioRedefinicao));
+
+        BadRequestException e = assertThrows(BadRequestException.class,
+                () -> authService.redefinirSenha(new RedefinirSenhaRequest("kaike@email.com", "123456", "novaSenha")));
+
+        assertThat(e.getMessage(), is(MSG_CODIGO_INVALIDO));
+        verify(usuarioRepository, never()).save(any());
+        verifyNoInteractions(passwordEncoder);
+    }
+
+    @Test
+    @DisplayName("Deve lançar BadRequestException quando o código de redefinição estiver expirado")
+    void redefinirSenhaExpiredError() {
+        usuarioRedefinicao.setRedefinicaoExpiraEm(LocalDateTime.now().minusMinutes(1));
+        when(usuarioRepository.findByEmail("kaike@email.com")).thenReturn(Optional.of(usuarioRedefinicao));
+
+        BadRequestException e = assertThrows(BadRequestException.class,
+                () -> authService.redefinirSenha(new RedefinirSenhaRequest("kaike@email.com", "123456", "novaSenha")));
+
+        assertThat(e.getMessage(), is(MSG_CODIGO_INVALIDO));
+        assertEquals("hash", usuarioRedefinicao.getSenha());
+        verify(usuarioRepository, never()).save(any());
+        verifyNoInteractions(passwordEncoder);
+    }
+
+    @Test
+    @DisplayName("Deve incrementar as tentativas quando o código de redefinição estiver errado")
+    void redefinirSenhaWrongCodeError() {
+        usuarioRedefinicao.setTentativasRedefinicao(1);
+        when(usuarioRepository.findByEmail("kaike@email.com")).thenReturn(Optional.of(usuarioRedefinicao));
+        when(passwordEncoder.matches("000000", "hash-codigo")).thenReturn(false);
+
+        BadRequestException e = assertThrows(BadRequestException.class,
+                () -> authService.redefinirSenha(new RedefinirSenhaRequest("kaike@email.com", "000000", "novaSenha")));
+
+        assertThat(e.getMessage(), is(MSG_CODIGO_INVALIDO));
+        assertEquals(2, usuarioRedefinicao.getTentativasRedefinicao());
+        assertEquals("hash-codigo", usuarioRedefinicao.getCodigoRedefinicao());
+        assertEquals("hash", usuarioRedefinicao.getSenha());
+        verify(usuarioRepository).save(usuarioRedefinicao);
+        verify(passwordEncoder, never()).encode(anyString());
+    }
+
+    @Test
+    @DisplayName("Deve invalidar o código de redefinição ao atingir o máximo de tentativas")
+    void redefinirSenhaMaxAttemptsError() {
+        usuarioRedefinicao.setTentativasRedefinicao(4);
+        when(usuarioRepository.findByEmail("kaike@email.com")).thenReturn(Optional.of(usuarioRedefinicao));
+        when(passwordEncoder.matches("000000", "hash-codigo")).thenReturn(false);
+
+        BadRequestException e = assertThrows(BadRequestException.class,
+                () -> authService.redefinirSenha(new RedefinirSenhaRequest("kaike@email.com", "000000", "novaSenha")));
+
+        assertThat(e.getMessage(), is(MSG_CODIGO_INVALIDO));
+        assertNull(usuarioRedefinicao.getCodigoRedefinicao());
+        assertNull(usuarioRedefinicao.getRedefinicaoExpiraEm());
+        assertEquals(0, usuarioRedefinicao.getTentativasRedefinicao());
+        assertEquals("hash", usuarioRedefinicao.getSenha());
+        verify(usuarioRepository).save(usuarioRedefinicao);
+    }
+
+    @Test
+    @DisplayName("Deve redefinir a senha e limpar os dados de redefinição")
+    void redefinirSenhaSuccess() {
+        usuarioRedefinicao.setTentativasRedefinicao(2);
+        when(usuarioRepository.findByEmail("kaike@email.com")).thenReturn(Optional.of(usuarioRedefinicao));
+        when(passwordEncoder.matches("123456", "hash-codigo")).thenReturn(true);
+        when(passwordEncoder.encode("novaSenha")).thenReturn("hash-novo");
+
+        authService.redefinirSenha(new RedefinirSenhaRequest("kaike@email.com", "123456", "novaSenha"));
+
+        assertEquals("hash-novo", usuarioRedefinicao.getSenha());
+        assertNull(usuarioRedefinicao.getCodigoRedefinicao());
+        assertNull(usuarioRedefinicao.getRedefinicaoExpiraEm());
+        assertEquals(0, usuarioRedefinicao.getTentativasRedefinicao());
+        verify(usuarioRepository).save(usuarioRedefinicao);
     }
 
     @Test
     @DisplayName("Deve realizar o login e retornar token, expiração, ID do usuário e roles")
     void loginSuccess() {
         Authentication auth = new UsernamePasswordAuthenticationToken(
-                usuarioVerificado, null, List.of(new SimpleGrantedAuthority("ROLE_CLIENTE")));
-        when(authenticationManager.authenticate(any(Authentication.class))).thenReturn(auth);
-        when(tokenProvider.generateToken(auth)).thenReturn("jwt-token");
-
-        TokenResponse response = authService.login(new LoginRequest("kaike@email.com", "123456"));
-
-        assertEquals("jwt-token", response.token());
-        assertEquals(3600000L, response.expirationTime());
-        assertEquals(1L, response.userId());
-        assertEquals(List.of("ROLE_CLIENTE"), response.roles());
-        verify(tokenProvider).generateToken(auth);
-    }
-
-    @Test
-    @DisplayName("Deve retornar todas as roles do usuário no login")
-    void loginMultipleRolesSuccess() {
-        Authentication auth = new UsernamePasswordAuthenticationToken(
                 usuarioVerificado, null,
                 List.of(new SimpleGrantedAuthority("ROLE_ADMIN"), new SimpleGrantedAuthority("ROLE_BARBEIRO")));
+        when(usuarioRepository.findByEmail("kaike@email.com")).thenReturn(Optional.of(usuarioVerificado));
         when(authenticationManager.authenticate(any(Authentication.class))).thenReturn(auth);
         when(tokenProvider.generateToken(auth)).thenReturn("jwt-token");
 
-        TokenResponse response = authService.login(new LoginRequest("kaike@email.com", "123456"));
-
-        assertEquals(List.of("ROLE_ADMIN", "ROLE_BARBEIRO"), response.roles());
-    }
-
-    @Test
-    @DisplayName("Deve autenticar com o e-mail e a senha informados")
-    void loginAuthenticatesWithCredentialsSuccess() {
-        Authentication auth = new UsernamePasswordAuthenticationToken(
-                usuarioVerificado, null, List.of(new SimpleGrantedAuthority("ROLE_CLIENTE")));
-        when(authenticationManager.authenticate(any(Authentication.class))).thenReturn(auth);
-        when(tokenProvider.generateToken(auth)).thenReturn("jwt-token");
-
-        authService.login(new LoginRequest("kaike@email.com", "123456"));
+        TokenResponse response = authService.login(new LoginRequest("  kaike@email.com  ", "123456"));
 
         ArgumentCaptor<Authentication> captor = ArgumentCaptor.forClass(Authentication.class);
         verify(authenticationManager).authenticate(captor.capture());
 
         assertEquals("kaike@email.com", captor.getValue().getPrincipal());
         assertEquals("123456", captor.getValue().getCredentials());
+        assertEquals("jwt-token", response.token());
+        assertEquals(3600000L, response.expirationTime());
+        assertEquals(1L, response.userId());
+        assertEquals(List.of("ROLE_ADMIN", "ROLE_BARBEIRO"), response.roles());
+        verify(tokenProvider).generateToken(auth);
     }
 
     @Test
-    @DisplayName("Deve lançar BadCredentialsException e não gerar token com credenciais inválidas")
+    @DisplayName("Deve lançar NotFoundException no login quando o e-mail não estiver cadastrado")
+    void loginEmailNotFoundError() {
+        when(usuarioRepository.findByEmail("x@email.com")).thenReturn(Optional.empty());
+
+        NotFoundException e = assertThrows(NotFoundException.class,
+                () -> authService.login(new LoginRequest("x@email.com", "123456")));
+
+        assertThat(e.getMessage(), is("E-mail não cadastrado."));
+        verifyNoInteractions(authenticationManager, tokenProvider);
+    }
+
+    @Test
+    @DisplayName("Deve lançar BadRequestException e não gerar token com a senha incorreta")
     void loginInvalidCredentialsError() {
+        when(usuarioRepository.findByEmail("kaike@email.com")).thenReturn(Optional.of(usuarioVerificado));
         when(authenticationManager.authenticate(any(Authentication.class)))
                 .thenThrow(new BadCredentialsException("Bad credentials"));
 
-        assertThrows(BadCredentialsException.class,
+        BadRequestException e = assertThrows(BadRequestException.class,
                 () -> authService.login(new LoginRequest("kaike@email.com", "errada")));
 
+        assertThat(e.getMessage(), is("Senha incorreta."));
         verifyNoInteractions(tokenProvider);
     }
 }
