@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import {useEffect, useRef, useState} from 'react';
 import api from '../../api/api.js';
 import Navbar from '../../components/Navbar.jsx';
-import { Title } from '../LoginECadastro/Style.js';
-import { lerSessao } from '../../auth/session.js';
+import SidebarProfissional from '../../components/layout/SidebarProfissional.jsx';
+import './Mensagens.css';
+import {Title} from '../LoginECadastro/Style.js';
+import {lerSessao} from '../../auth/session.js';
 
 // "2026-10-25T14:30:12.123" -> "14:30"
 const hora = (dh) => String(dh).slice(11, 16);
@@ -10,10 +12,13 @@ const hora = (dh) => String(dh).slice(11, 16);
 function Mensagens() {
     const sessao = lerSessao();
     const ehCliente = sessao?.roles?.includes('ROLE_CLIENTE');
+    const ehBarbeiro = sessao?.roles?.includes('ROLE_BARBEIRO');
+    const [clientes, setClientes] = useState([]);
 
     const [conversas, setConversas] = useState([]);
     const [barbeiros, setBarbeiros] = useState([]);
     const [conversaId, setConversaId] = useState(null);
+    const [rascunho, setRascunho] = useState(null);
     const [mensagens, setMensagens] = useState([]);
     const [texto, setTexto] = useState('');
     const [enviando, setEnviando] = useState(false);
@@ -22,6 +27,11 @@ function Mensagens() {
     const corpo = useRef(null);
 
     const conversaAtual = conversas.find((c) => c.id === conversaId);
+    const conversasVisiveis = conversas.filter((c) => c.ultimaMensagem || c.id === conversaId);
+    // quem já tem conversa não aparece de novo em "Nova conversa"
+    const comConversa = new Set(conversasVisiveis.map((c) => c.interlocutorNome));
+    const clientesNovos = clientes.filter((c) => !comConversa.has(c.nome));
+    const barbeirosNovos = barbeiros.filter((b) => !comConversa.has(b.nome));
 
     async function carregarConversas() {
         try {
@@ -36,7 +46,20 @@ function Mensagens() {
     useEffect(() => {
         carregarConversas();
         if (ehCliente) {
-            api.get('/barbeiros').then((r) => setBarbeiros(r.data)).catch(() => {});
+            // só os barbeiros com quem o cliente tem horário (não cancelado)
+            Promise.all([api.get('/barbeiros'), api.get('/agendamentos/meus')]).then(([bs, ags]) => {
+                const meus = new Set(ags.data.filter((a) => a.status !== 'CANCELADO').map((a) => a.barbeiroNome));
+                setBarbeiros(bs.data.filter((b) => meus.has(b.nome)));
+            }).catch(() => {
+            });
+        }
+        if (ehBarbeiro) {
+            api.get('/conversas/clientes-disponiveis').then(r => {
+                setClientes(r.data);
+                const nome = new URLSearchParams(window.location.search).get('cliente');
+                const alvo = nome && r.data.find(c => c.nome === nome);
+                if (alvo) setRascunho({id: alvo.id, nome: alvo.nome});
+            }).catch(() => setErro('Não foi possível carregar os clientes disponíveis.'));
         }
         const timer = setInterval(carregarConversas, 8000);
         return () => clearInterval(timer);
@@ -52,7 +75,7 @@ function Mensagens() {
         async function buscar() {
             try {
                 const r = await api.get(`/conversas/${conversaId}/mensagens`,
-                    { params: { depois: ultimoId.current } });
+                    {params: {depois: ultimoId.current}});
                 if (!ativo || r.data.length === 0) return;
 
                 ultimoId.current = r.data[r.data.length - 1].id;
@@ -62,7 +85,11 @@ function Mensagens() {
                 });
 
                 if (r.data.some((m) => !m.minha)) {
-                    api.put(`/conversas/${conversaId}/lidas`).then(carregarConversas).catch(() => {});
+                    api.put(`/conversas/${conversaId}/lidas`).then(() => {
+                        carregarConversas();
+                        window.dispatchEvent(new Event('barberapp:mensagens-lidas'));
+                    }).catch(() => {
+                    });
                 }
             } catch {
                 // tenta de novo no próximo ciclo
@@ -71,24 +98,35 @@ function Mensagens() {
 
         buscar();
         const timer = setInterval(buscar, 4000);
-        return () => { ativo = false; clearInterval(timer); };
+        return () => {
+            ativo = false;
+            clearInterval(timer);
+        };
     }, [conversaId]);
 
     // rola só a caixa de mensagens, sem mexer na rolagem da página
     useEffect(() => {
         const el = corpo.current;
-        if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+        if (el) el.scrollTo({top: el.scrollHeight, behavior: 'smooth'});
     }, [mensagens]);
 
-    async function iniciar(barbeiroId) {
+    // só escolhe com quem falar: a conversa de verdade é criada quando a 1ª mensagem for enviada
+    function iniciar(id, nome) {
         setErro('');
-        try {
-            const r = await api.post('/conversas', { barbeiroId });
-            await carregarConversas();
-            setConversaId(r.data.id);
-        } catch (error) {
-            setErro(error.response?.data?.message || 'Não foi possível iniciar a conversa.');
+        const existente = conversas.find((c) => c.ultimaMensagem && c.interlocutorNome === nome);
+        setMensagens([]);
+        if (existente) {
+            setRascunho(null);
+            setConversaId(existente.id);
+        } else {
+            setConversaId(null);
+            setRascunho({id, nome});
         }
+    }
+
+    function abrirConversa(id) {
+        setRascunho(null);
+        setConversaId(id);
     }
 
     async function enviar(event) {
@@ -99,7 +137,14 @@ function Mensagens() {
         setErro('');
         setEnviando(true);
         try {
-            const r = await api.post(`/conversas/${conversaId}/mensagens`, { texto: conteudo });
+            let id = conversaId;
+            if (!id) {
+                const nova = await api.post('/conversas', ehCliente ? {barbeiroId: rascunho.id} : {clienteId: rascunho.id});
+                id = nova.data.id;
+                setConversaId(id);
+                setRascunho(null);
+            }
+            const r = await api.post(`/conversas/${id}/mensagens`, {texto: conteudo});
             setMensagens((atual) => (atual.some((m) => m.id === r.data.id) ? atual : [...atual, r.data]));
             setTexto('');
             carregarConversas();
@@ -137,10 +182,11 @@ function Mensagens() {
         if (event.key === 'Enter' && !event.shiftKey) enviar(event);
     }
 
-    return (
+    const profissional = ehBarbeiro || sessao?.roles?.includes('ROLE_ADMIN');
+    const conteudo = (
         <>
-            <Navbar />
-            <main className="page">
+            {!profissional && <Navbar/>}
+            <main className={profissional ? "mensagens-profissional" : "page"}>
                 <header className="page__head">
                     <Title>Mensagens</Title>
                     <p className="muted">
@@ -155,11 +201,11 @@ function Mensagens() {
                 <div className="msgs">
                     <aside className="panel msgs__lista">
                         <h2>Conversas</h2>
-                        {conversas.length === 0 && <p className="muted small">Nenhuma conversa ainda.</p>}
-                        {conversas.map((c) => (
+                        {conversasVisiveis.length === 0 && <p className="muted small">Nenhuma conversa ainda.</p>}
+                        {conversasVisiveis.map((c) => (
                             <button key={c.id} type="button"
                                     className={`msgs__item ${c.id === conversaId ? 'msgs__item--on' : ''} ${c.encerrada ? 'msgs__item--fim' : ''}`}
-                                    onClick={() => setConversaId(c.id)}>
+                                    onClick={() => abrirConversa(c.id)}>
                                 <span className="lista__info">
                                     <strong>{c.interlocutorNome}</strong>
                                     <span className="muted small msgs__previa">
@@ -170,13 +216,32 @@ function Mensagens() {
                             </button>
                         ))}
 
+                        {ehBarbeiro && (
+                            <>
+                                <h3>Nova conversa com cliente</h3>
+                                <div className="chips">
+                                    {clientesNovos.length === 0 &&
+                                        <p className="muted small">Nenhum cliente novo para conversar.</p>}
+                                    {clientesNovos.map(c => (
+                                        <button key={c.id} type="button" className="chip" onClick={() => iniciar(c.id, c.nome)}>
+                                            {c.nome}
+                                        </button>
+                                    ))}
+                                </div>
+                            </>
+                        )}
+
                         {ehCliente && (
                             <>
                                 <h3>Nova conversa</h3>
                                 <div className="chips">
-                                    {barbeiros.map((b) => (
+                                    {barbeirosNovos.length === 0 &&
+                                        <p className="muted small">{barbeiros.length === 0
+                                            ? 'Você poderá conversar com o barbeiro depois de agendar um horário com ele.'
+                                            : 'Você já tem conversa com todos os seus barbeiros.'}</p>}
+                                    {barbeirosNovos.map((b) => (
                                         <button key={b.id} type="button" className="chip"
-                                                onClick={() => iniciar(b.id)}>
+                                                onClick={() => iniciar(b.id, b.nome)}>
                                             {b.nome}
                                         </button>
                                     ))}
@@ -186,15 +251,15 @@ function Mensagens() {
                     </aside>
 
                     <section className="panel msgs__chat">
-                        {!conversaAtual && (
+                        {!conversaAtual && !rascunho && (
                             <p className="muted">Escolha uma conversa para ver as mensagens.</p>
                         )}
 
-                        {conversaAtual && (
+                        {(conversaAtual || rascunho) && (
                             <>
                                 <div className="row row--between">
-                                    <h2>{conversaAtual.interlocutorNome}</h2>
-                                    {!conversaAtual.encerrada && (
+                                    <h2>{conversaAtual?.interlocutorNome ?? rascunho.nome}</h2>
+                                    {conversaAtual && !conversaAtual.encerrada && (
                                         <button type="button" className="btn btn--ghost" onClick={finalizar}>
                                             Finalizar conversa
                                         </button>
@@ -213,7 +278,7 @@ function Mensagens() {
                                     ))}
                                 </div>
 
-                                {conversaAtual.encerrada ? (
+                                {conversaAtual?.encerrada ? (
                                     <div className="msgs__aviso">
                                         Esta conversa foi finalizada.
                                         {ehCliente ? (
@@ -230,7 +295,7 @@ function Mensagens() {
                                     <form className="msgs__form" onSubmit={enviar}>
                                         <textarea rows={1} value={texto} placeholder="Escreva sua mensagem"
                                                   maxLength={1000}
-                                                  onChange={(e) => setTexto(e.target.value)} onKeyDown={aoDigitar} />
+                                                  onChange={(e) => setTexto(e.target.value)} onKeyDown={aoDigitar}/>
                                         <button type="submit" className="btn btn--primary"
                                                 disabled={enviando || !texto.trim()}>
                                             Enviar
@@ -244,6 +309,7 @@ function Mensagens() {
             </main>
         </>
     );
+    return profissional ? <SidebarProfissional>{conteudo}</SidebarProfissional> : conteudo;
 }
 
 export default Mensagens;

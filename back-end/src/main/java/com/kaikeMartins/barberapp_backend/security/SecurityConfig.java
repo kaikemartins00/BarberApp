@@ -43,7 +43,8 @@ public class SecurityConfig {
                         }))
 
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers("/auth/**", "/webhooks/mercadopago").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/webhooks/mercadopago").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)

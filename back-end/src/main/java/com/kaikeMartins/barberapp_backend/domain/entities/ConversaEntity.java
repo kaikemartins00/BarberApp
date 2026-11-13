@@ -9,7 +9,7 @@ import lombok.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "conversas",
+@Table(name = "conversas_tb",
         uniqueConstraints = @UniqueConstraint(columnNames = {"cliente_id", "barbeiro_id"}))
 public class ConversaEntity {
 

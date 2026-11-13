@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "tb_historico_conversa")
+@Table(name = "historico_conversa_tb")
 public class HistoricoConversaEntity {
 
     @Id

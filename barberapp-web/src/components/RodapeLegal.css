@@ -1,0 +1,36 @@
+.rodape-legal {
+    padding: 24px 20px 40px;
+    text-align: center;
+    color: var(--muted, #a5a5b5);
+    font-size: 13px;
+}
+
+.rodape-legal small {
+    display: block;
+    margin-top: 10px;
+    font-size: 12px;
+    opacity: .8;
+}
+
+.rodape-legal__links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px 18px;
+}
+
+.rodape-legal__links a {
+    color: var(--muted, #a5a5b5);
+    text-decoration: none;
+    font-size: 13px;
+}
+
+.rodape-legal__links a:hover {
+    color: var(--gold, #d6a345);
+    text-decoration: underline;
+}
+
+.auth .rodape-legal__links {
+    justify-content: flex-start;
+    margin-top: 18px;
+}

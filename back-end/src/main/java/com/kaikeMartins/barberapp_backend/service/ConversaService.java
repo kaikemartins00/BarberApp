@@ -16,6 +16,9 @@ import com.kaikeMartins.barberapp_backend.repository.BarbeiroRepository;
 import com.kaikeMartins.barberapp_backend.repository.ClienteRepository;
 import com.kaikeMartins.barberapp_backend.repository.ConversaRepository;
 import com.kaikeMartins.barberapp_backend.repository.MensagemRepository;
+import com.kaikeMartins.barberapp_backend.repository.AgendamentoRepository;
+import com.kaikeMartins.barberapp_backend.dto.ClienteConversaResponse;
+import com.kaikeMartins.barberapp_backend.domain.enums.AgendamentoStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -35,6 +38,7 @@ public class ConversaService {
     private final MensagemRepository mensagemRepository;
     private final ClienteRepository clienteRepository;
     private final BarbeiroRepository barbeiroRepository;
+    private final AgendamentoRepository agendamentoRepository;
 
     @Transactional(readOnly = true)
     public List<ConversaResponse> minhasConversas() {
@@ -51,24 +55,65 @@ public class ConversaService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<ClienteConversaResponse> clientesDisponiveis() {
+        UsuarioEntity usuario = usuarioAutenticado();
+        if (!temRole(usuario, "ROLE_BARBEIRO")) {
+            throw new ForbiddenException("Apenas barbeiros podem consultar seus clientes.");
+        }
+        return agendamentoRepository.findByBarbeiroId(usuario.getId()).stream()
+                .filter(a -> a.getStatus() != AgendamentoStatus.CANCELADO)
+                .map(a -> a.getCliente())
+                .collect(java.util.stream.Collectors.toMap(ClienteEntity::getId,
+                        c -> new ClienteConversaResponse(c.getId(), c.getNome()),
+                        (primeiro, segundo) -> primeiro))
+                .values().stream()
+                .sorted(Comparator.comparing(ClienteConversaResponse::nome))
+                .toList();
+    }
+
     public ConversaResponse iniciar(ConversaRequest request) {
         UsuarioEntity usuario = usuarioAutenticado();
+        ClienteEntity cliente;
+        BarbeiroEntity barbeiro;
 
-        ClienteEntity cliente = clienteRepository.findById(usuario.getId())
-                .orElseThrow(() -> new ForbiddenException("Apenas clientes podem iniciar conversas."));
-
-        BarbeiroEntity barbeiro = barbeiroRepository.findById(request.barbeiroId())
-                .orElseThrow(() -> new NotFoundException("Barbeiro não encontrado"));
+        if (temRole(usuario, "ROLE_CLIENTE")) {
+            if (request.barbeiroId() == null) {
+                throw new BadRequestException("Informe o barbeiro.");
+            }
+            cliente = clienteRepository.findById(usuario.getId())
+                    .orElseThrow(() -> new NotFoundException("Cliente não encontrado"));
+            barbeiro = barbeiroRepository.findById(request.barbeiroId())
+                    .orElseThrow(() -> new NotFoundException("Barbeiro não encontrado"));
+            boolean vinculado = agendamentoRepository.findByClienteId(usuario.getId()).stream()
+                    .anyMatch(a -> a.getStatus() != AgendamentoStatus.CANCELADO
+                            && a.getBarbeiro().getId().equals(barbeiro.getId()));
+            if (!vinculado) {
+                throw new ForbiddenException("Você só pode conversar com barbeiros com quem tem horário agendado.");
+            }
+        } else if (temRole(usuario, "ROLE_BARBEIRO")) {
+            if (request.clienteId() == null) {
+                throw new BadRequestException("Informe o cliente.");
+            }
+            barbeiro = barbeiroRepository.findById(usuario.getId())
+                    .orElseThrow(() -> new NotFoundException("Barbeiro não encontrado"));
+            boolean vinculado = agendamentoRepository.findByBarbeiroId(usuario.getId())
+                    .stream().anyMatch(a -> a.getStatus() != AgendamentoStatus.CANCELADO
+                            && a.getCliente().getId().equals(request.clienteId()));
+            if (!vinculado) {
+                throw new ForbiddenException("Você só pode conversar com clientes dos seus atendimentos.");
+            }
+            cliente = clienteRepository.findById(request.clienteId())
+                    .orElseThrow(() -> new NotFoundException("Cliente não encontrado"));
+        } else {
+            throw new ForbiddenException("Perfil sem permissão para iniciar conversas.");
+        }
 
         ConversaEntity conversa = conversaRepository
                 .findByClienteIdAndBarbeiroId(cliente.getId(), barbeiro.getId())
                 .orElseGet(() -> conversaRepository.save(
                         ConversaEntity.builder().cliente(cliente).barbeiro(barbeiro).build()));
-
-        if (conversa.isEncerrada()) {
-            conversa.setEncerrada(false);
-        }
-
+        if (conversa.isEncerrada()) conversa.setEncerrada(false);
         return toResponse(conversa, usuario.getId());
     }
 
@@ -182,6 +227,5 @@ public class ConversaService {
     private boolean temRole(UsuarioEntity usuario, String role) {
         return usuario.getRoles().stream().anyMatch(r -> role.equals(r.getAuthority()));
     }
-
 
 }

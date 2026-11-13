@@ -3,6 +3,7 @@ package com.kaikeMartins.barberapp_backend.controller;
 import com.kaikeMartins.barberapp_backend.domain.enums.AgendamentoStatus;
 import com.kaikeMartins.barberapp_backend.dto.AgendamentoRequest;
 import com.kaikeMartins.barberapp_backend.dto.AgendamentoResponse;
+import com.kaikeMartins.barberapp_backend.dto.ResumoCancelamentosResponse;
 import com.kaikeMartins.barberapp_backend.service.AgendamentoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,12 @@ public class AgendamentoController {
     @PreAuthorize("hasAnyRole('CLIENTE', 'ADMIN')")
     public List<AgendamentoResponse> meusAgendamentos() {
         return service.meusAgendamentos();
+    }
+
+    @GetMapping("/meus/cancelamentos")
+    @PreAuthorize("hasRole('CLIENTE')")
+    public ResumoCancelamentosResponse cancelamentos() {
+        return service.resumoCancelamentos();
     }
 
     @PostMapping
@@ -52,4 +59,18 @@ public class AgendamentoController {
     public AgendamentoResponse atualizarStatus(@PathVariable Long id, @RequestParam AgendamentoStatus status) {
         return service.atualizarStatus(id, status);
     }
+
+    @PatchMapping("/{id}/concluir")
+    @PreAuthorize("hasAnyRole('BARBEIRO', 'ADMIN')")
+    public AgendamentoResponse concluir(@PathVariable Long id) {
+        return service.registrarComparecimento(id, AgendamentoStatus.CONCLUIDO
+        );
+    }
+
+    @PatchMapping("/{id}/nao-compareceu")
+    @PreAuthorize("hasAnyRole('BARBEIRO', 'ADMIN')")
+    public AgendamentoResponse registrarFalta(@PathVariable Long id) {
+        return service.registrarComparecimento(id, AgendamentoStatus.NAO_COMPARECEU);
+    }
+
 }

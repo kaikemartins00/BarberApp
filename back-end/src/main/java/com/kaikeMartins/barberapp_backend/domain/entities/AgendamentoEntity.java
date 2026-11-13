@@ -49,4 +49,13 @@ public class AgendamentoEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private AgendamentoStatus status;
+
+    @Column(name = "lembrete_enviado_em")
+    private LocalDateTime lembreteEnviadoEm;
+
+    @Column(name = "cancelado_em")
+    private LocalDateTime canceladoEm;
+
+    @Column(name = "cancelado_pelo_cliente")
+    private Boolean canceladoPeloCliente;
 }

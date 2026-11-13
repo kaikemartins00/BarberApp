@@ -21,6 +21,8 @@
 		<maven.compiler.target>21</maven.compiler.target>
 		<maven.compiler.source>21</maven.compiler.source>
 		<maven.compiler.plugin.version>3.16.0</maven.compiler.plugin.version>
+		<google.zxing.version>3.5.2</google.zxing.version>
+		<aws.sdk.version>2.24.12</aws.sdk.version>
 	</properties>
 
 	<dependencyManagement>
@@ -67,6 +69,23 @@
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
 			<optional>true</optional>
+		</dependency>
+
+		<dependency>
+			<groupId>com.google.zxing</groupId>
+			<artifactId>core</artifactId>
+			<version>${google.zxing.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.google.zxing</groupId>
+			<artifactId>javase</artifactId>
+			<version>${google.zxing.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>s3</artifactId>
+			<version>${aws.sdk.version}</version>
 		</dependency>
 
 		<dependency>

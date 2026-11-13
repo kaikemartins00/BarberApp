@@ -3,13 +3,23 @@ import api from '../../api/api.js';
 import Navbar from '../../components/Navbar.jsx';
 import { Title } from '../LoginECadastro/Style.js';
 
-const ASSUNTOS = ['Não consegui agendar', 'Problema com o código de verificação', 'Erro no site', 'Outro'];
+const ASSUNTOS = [
+    'Erro no pagamento ou Pix',
+    'Site fora do ar ou muito lento',
+    'Não consegui agendar',
+    'Problema com meu agendamento ou reembolso',
+    'Problema com o código de verificação',
+    'Erro no site',
+    'Outro',
+];
 const ROTULO_STATUS = { ABERTO: 'Aberto', EM_ANDAMENTO: 'Em andamento', FINALIZADO: 'Finalizado' };
 
 function Problemas() {
-    const [titulo, setTitulo] = useState(ASSUNTOS[0]);
+    const [titulo, setTitulo] = useState(ASSUNTOS[2]);
     const [descricao, setDescricao] = useState('');
     const [meus, setMeus] = useState([]);
+    const [cancelados, setCancelados] = useState([]);
+    const [agendamentoId, setAgendamentoId] = useState('');
     const [enviando, setEnviando] = useState(false);
     const [erro, setErro] = useState('');
     const [sucesso, setSucesso] = useState('');
@@ -18,15 +28,25 @@ function Problemas() {
 
     useEffect(() => { carregar(); }, []);
 
+    // agendamentos cancelados: o cliente pode pedir análise de reembolso por imprevisto
+    useEffect(() => {
+        api.get('/agendamentos/meus', { semRedirect: true })
+            .then((r) => setCancelados((Array.isArray(r.data) ? r.data : []).filter((a) => a.status === 'CANCELADO')))
+            .catch(() => {});
+    }, []);
+
+    const pedeAnalise = titulo === ASSUNTOS[3];
+
     async function enviar(event) {
         event.preventDefault();
         setErro('');
         setSucesso('');
         setEnviando(true);
         try {
-            await api.post('/chamados', { titulo, descricao });
+            await api.post('/chamados', { titulo, descricao, agendamentoId: pedeAnalise && agendamentoId ? Number(agendamentoId) : null });
             setSucesso('Chamado enviado! Assim que responderem, a resposta aparece aqui embaixo.');
             setDescricao('');
+            setAgendamentoId('');
             carregar();
         } catch (error) {
             setErro(error.response?.data?.message || 'Não foi possível enviar o chamado.');
@@ -52,6 +72,26 @@ function Problemas() {
                                 {ASSUNTOS.map((a) => <option key={a} value={a}>{a}</option>)}
                             </select>
                         </label>
+
+                        {pedeAnalise && (
+                            <label className="field">
+                                <span>Agendamento cancelado (opcional)</span>
+                                <select value={agendamentoId} onChange={(e) => setAgendamentoId(e.target.value)}>
+                                    <option value="">Não é sobre um cancelamento</option>
+                                    {cancelados.map((a) => (
+                                        <option key={a.id} value={a.id}>
+                                            {a.servicoNome} com {a.barbeiroNome}, {String(a.data).split('-').reverse().join('/')} às {String(a.horario).slice(0, 5)}
+                                        </option>
+                                    ))}
+                                </select>
+                                {agendamentoId && (
+                                    <small className="muted">
+                                        Teve um imprevisto (acidente, emergência)? Conte o que houve abaixo. A administração
+                                        analisa o caso e, se aprovar, o Pix pago é devolvido.
+                                    </small>
+                                )}
+                            </label>
+                        )}
 
                         <label className="field">
                             <span>O que aconteceu?</span>

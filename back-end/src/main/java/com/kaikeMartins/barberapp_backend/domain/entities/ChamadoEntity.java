@@ -18,7 +18,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
-@Table(name= "chamados")
+@Table(name= "chamados_tb")
 public class ChamadoEntity {
 
     @Id
@@ -44,10 +44,13 @@ public class ChamadoEntity {
     @JoinColumn(name = "barbeiro_id")
     private BarbeiroEntity barbeiro;
 
-    // quem está atendendo o chamado (admin ou barbeiro)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "responsavel_id")
     private UsuarioEntity responsavel;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "agendamento_id")
+    private AgendamentoEntity agendamento;
 
     @OneToMany(mappedBy = "chamado", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @Builder.Default

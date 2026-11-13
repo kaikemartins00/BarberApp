@@ -17,5 +17,7 @@ public record ChamadoResponse(
         String clienteEmail,
         String responsavelNome,
         boolean podeAtender,
-        List<RespostaChamResponse> respostas
+        List<RespostaChamResponse> respostas,
+        Long agendamentoId,
+        boolean reembolsavel
 ) {}

@@ -2,15 +2,17 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../../api/api.js';
 import AuthLayout from "../../components/AuthLayout.jsx";
+import { VERSAO_TERMOS } from '../../legal/dadosLegais.js';
 
 function Cadastro() {
   const navigate = useNavigate();
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
-  const [telefone, setTelefone] = useState('');
+  const [confirmarSenha, setConfirmarSenha] = useState('');
   const [erro, setErro] = useState('');
   const [carregando, setCarregando] = useState(false);
+  const [aceitou, setAceitou] = useState(false);
 
   async function handleCadastro(event) { // Função assíncrona para lidar com o envio do formulário de cadastro
     event.preventDefault(); // Impede o comportamento padrão do navegador de recarregar a página ao enviar o formulário
@@ -22,12 +24,22 @@ function Cadastro() {
       return;
     }
 
+    if (senha !== confirmarSenha) {
+      setErro('As senhas não coincidem.');
+      return;
+    }
+
+    if (!aceitou) {
+      setErro('Para criar a conta, aceite os Termos de Uso e a Política de Privacidade.');
+      return;
+    }
+
     setCarregando(true);
 
     try {
-      const response = await api.post('/auth/cadastro', { nome, email, senha, telefone });
+      await api.post('/auth/cadastro', { nome, email, senha, aceitouTermos: true, versaoTermos: VERSAO_TERMOS });
       navigate('/verificar-conta', {
-          state: { email } 
+        state: { email }
       });
 
     } catch (error) {
@@ -58,9 +70,18 @@ function Cadastro() {
           </label>
 
           <label className="field">
-            <span>Telefone</span>
-            <input type="text" placeholder="(79) 90000-0000" value={telefone}
-                   onChange={(e) => setTelefone(e.target.value)} required />
+            <span>Repita a senha</span>
+            <input type="password" placeholder="••••••••" value={confirmarSenha}
+                   onChange={(e) => setConfirmarSenha(e.target.value)} required />
+          </label>
+
+          <label className="field" style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
+            <input type="checkbox" checked={aceitou} onChange={(e) => setAceitou(e.target.checked)} style={{ marginTop: 4 }} />
+            <span style={{ fontSize: 14, lineHeight: 1.5 }}>
+              Li e aceito os <Link to="/termos" target="_blank">Termos de Uso</Link>, a{' '}
+              <Link to="/reembolso" target="_blank">Política de Cancelamento e Reembolso</Link> e a{' '}
+              <Link to="/privacidade" target="_blank">Política de Privacidade</Link>.
+            </span>
           </label>
 
           {erro && <p className="alert alert--erro">{erro}</p>}

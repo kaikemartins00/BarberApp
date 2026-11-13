@@ -113,7 +113,9 @@ public class AuthService {
         clienteRepository.save(ClienteEntity.builder()
                 .usuario(usuario)
                 .nome(dto.nome())
-                .telefone(dto.telefone())
+                .telefone("")
+                .aceitouTermosEm(Boolean.TRUE.equals(dto.aceitouTermos()) ? LocalDateTime.now() : null)
+                .versaoTermos(Boolean.TRUE.equals(dto.aceitouTermos()) ? dto.versaoTermos() : null)
                 .build());
 
         verificarLimiteEmail(usuario);
@@ -258,6 +260,11 @@ public class AuthService {
 
         UsuarioEntity usuario = usuarioRepository.findByEmail(request.email().trim())
                 .orElseThrow(() -> new NotFoundException("E-mail não cadastrado."));
+
+        if (barbeiroRepository.findById(usuario.getId())
+                .map(b -> b.getDesligadoEm() != null).orElse(false)) {
+            throw new BadRequestException("Este acesso foi desativado. Procure o administrador.");
+        }
 
         Authentication authentication;
 

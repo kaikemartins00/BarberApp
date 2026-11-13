@@ -1,0 +1,184 @@
+
+:root,
+:root[data-tema="escuro"] {
+    color-scheme: dark;
+
+    --fundo: #09090b;
+    --superficie: #141419;
+    --superficie-secundaria: #1c1c23;
+    --texto: #f5f5f7;
+    --texto-secundario: #a5a5b5;
+    --borda: #2b2b35;
+    --dourado: #d6a345;
+
+    --bg: var(--fundo);
+    --surface: var(--superficie);
+    --surface-2: var(--superficie-secundaria);
+    --text: var(--texto);
+    --muted: var(--texto-secundario);
+    --line: var(--borda);
+    --gold: var(--dourado);
+}
+
+:root[data-tema="claro"] {
+    color-scheme: light;
+
+    --fundo: #f5f6f8;
+    --superficie: #ffffff;
+    --superficie-secundaria: #f0f2f5;
+    --texto: #202127;
+    --texto-secundario: #626977;
+    --borda: #e1e4e9;
+    --dourado: #b7832d;
+
+    --bg: var(--fundo);
+    --surface: var(--superficie);
+    --surface-2: var(--superficie-secundaria);
+    --text: var(--texto);
+    --muted: var(--texto-secundario);
+    --line: var(--borda);
+    --gold: var(--dourado);
+}
+
+html,
+body,
+#root {
+    min-height: 100%;
+}
+
+body {
+    background-color: var(--fundo);
+    color: var(--texto);
+    transition: background-color .2s, color .2s;
+}
+
+:root[data-tema="claro"] .page,
+:root[data-tema="claro"] .adm-main {
+    background-color: var(--fundo);
+    color: var(--texto);
+}
+
+:root[data-tema="claro"] .nav,
+:root[data-tema="claro"] .adm-sidebar,
+:root[data-tema="claro"] .card {
+    background-color: var(--superficie);
+    color: var(--texto);
+    border-color: var(--borda);
+}
+
+:root[data-tema="claro"] input,
+:root[data-tema="claro"] select,
+:root[data-tema="claro"] textarea {
+    background-color: var(--superficie);
+    color: var(--texto);
+    border-color: var(--borda);
+}
+
+:root[data-tema="claro"] .page .muted,
+:root[data-tema="claro"] .nav .muted {
+    color: var(--texto-secundario);
+}
+
+:root[data-tema="claro"] .btn--primary {
+    background-color: #d6a345;
+    color: #17130b;
+    border-color: #d6a345;
+}
+
+:root[data-tema="claro"] .btn--ghost {
+    color: var(--texto);
+    border-color: var(--borda);
+}
+.auth-tema {
+    position: fixed;
+    top: 24px;
+    right: 28px;
+    z-index: 100;
+}
+
+.auth-tema button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid var(--borda);
+    background: var(--superficie);
+    color: var(--texto);
+    cursor: pointer;
+    transition: background .2s, border-color .2s, transform .2s;
+}
+
+.auth-tema button:hover {
+    border-color: var(--dourado);
+    transform: rotate(15deg);
+}
+
+@media (max-width: 640px) {
+    .auth-tema {
+        top: 16px;
+        right: 16px;
+    }
+}
+:root[data-tema="claro"] .auth {
+    background: #f8f9fc;
+    color: #171923;
+}
+
+:root[data-tema="claro"] .auth__visual {
+    background:
+            repeating-linear-gradient(
+                    135deg,
+                    #e9edf3 0px,
+                    #e9edf3 20px,
+                    #e2e7ef 20px,
+                    #e2e7ef 40px
+            );
+    border-right: 1px solid #d9dee7;
+}
+
+:root[data-tema="claro"] .auth__painel {
+    background: #ffffff;
+    color: #171923;
+}
+
+:root[data-tema="claro"] .auth__form h1,
+:root[data-tema="claro"] .auth__frase {
+    color: #171923;
+}
+
+:root[data-tema="claro"] .auth__form .muted,
+:root[data-tema="claro"] .auth__form label {
+    color: #626b7b;
+}
+
+:root[data-tema="claro"] .auth__form input {
+    background: #f5f7fa;
+    color: #171923;
+    border: 1px solid #dce1e9;
+}
+
+:root[data-tema="claro"] .auth__form input:focus {
+    background: #ffffff;
+    border-color: #bd8b35;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(189, 139, 53, 0.12);
+}
+
+:root[data-tema="claro"] .auth__form .btn--primary {
+    background: #d6a345;
+    color: #17130c;
+    border-color: #d6a345;
+}
+
+:root[data-tema="claro"] .auth__form .btn--primary:hover {
+    background: #c49338;
+}
+
+:root[data-tema="claro"] .auth-tema button {
+    background: #ffffff;
+    color: #171923;
+    border-color: #dce1e9;
+}

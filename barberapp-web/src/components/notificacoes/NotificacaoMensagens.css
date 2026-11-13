@@ -1,0 +1,27 @@
+.nm-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-width: 0
+}
+
+.nm-link > span:nth-child(2) {
+    flex: 1;
+    text-align: left
+}
+
+.nm-badge {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    min-width: 21px;
+    height: 21px;
+    padding: 0 5px;
+    border-radius: 99px;
+    background: #d6a447;
+    color: #18130a;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1
+}

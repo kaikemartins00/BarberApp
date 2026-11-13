@@ -1,13 +1,22 @@
 <!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>barberapp-web</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BarberApp</title>
+  <script>
+    // aplica o tema antes de a página aparecer, para não piscar o escuro ao atualizar
+    (function () {
+      try {
+        var t = sessionStorage.getItem('barberapp-tema') || localStorage.getItem('barberapp-tema');
+        document.documentElement.setAttribute('data-tema', t === 'claro' || t === 'light' ? 'claro' : 'escuro');
+      } catch (e) {}
+    })();
+  </script>
+</head>
+<body>
+<div id="root"></div>
+<script type="module" src="/src/main.jsx"></script>
+</body>
 </html>

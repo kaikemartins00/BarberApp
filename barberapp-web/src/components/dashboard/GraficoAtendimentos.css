@@ -1,0 +1,105 @@
+.ga-card {
+    background: var(--adm-card-bg, #17171d);
+    border: 1px solid var(--adm-border, #303038);
+    border-radius: 14px;
+    padding: 14px 20px 10px;
+    color: var(--adm-text, #f4f4f6)
+}
+
+.ga-topo {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px 28px;
+    flex-wrap: wrap
+}
+
+.ga-topo h2 {
+    font-size: 15px;
+    margin: 0 0 3px;
+    display: flex;
+    align-items: center;
+    gap: 8px
+}
+
+.ga-topo p {
+    font-size: 11px;
+    color: var(--adm-muted, #a4a9bb);
+    margin: 0
+}
+
+.ga-icone {
+    color: var(--adm-gold, #d6a447)
+}
+
+.ga-resumo {
+    display: flex;
+    gap: 28px;
+    margin: 0 0 0 auto
+}
+
+.ga-resumo > div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px
+}
+
+.ga-resumo span {
+    font-size: 11px;
+    color: var(--adm-muted, #a4a9bb)
+}
+
+.ga-resumo strong {
+    font-size: 18px
+}
+
+.ga-positivo {
+    color: var(--adm-gold, #d6a447)
+}
+
+.ga-negativo {
+    color: #e87878
+}
+
+.ga-legenda {
+    display: flex;
+    flex-direction: column;
+    gap: 4px
+}
+
+.ga-legenda span {
+    font-size: 11px;
+    color: var(--adm-muted, #a4a9bb);
+    display: flex;
+    gap: 7px;
+    align-items: center
+}
+
+.ga-legenda i {
+    display: inline-block;
+    width: 16px;
+    height: 3px;
+    border-radius: 3px
+}
+
+.ga-cor-atual {
+    background: #d6a447
+}
+
+.ga-cor-anterior {
+    background: #8b91a4
+}
+
+.ga-grafico {
+    overflow-x: auto;
+    margin-top: 4px
+}
+
+.ga-grafico svg {
+    display: block;
+    width: 100%;
+    min-width: 480px;
+    max-height: 130px;
+    height: auto;
+    color: var(--adm-text, #f4f4f6)
+}

@@ -1,0 +1,260 @@
+/* Painel do barbeiro/admin: tema claro/escuro e menu lateral em altura total */
+
+.adm-layout {
+    --adm-bg: #0c0c0f;
+    --adm-side: #111115;
+    --adm-card-bg: #17171c;
+    --adm-card-2: #202027;
+    --adm-border: #2b2b33;
+    --adm-text: #f5f5f5;
+    --adm-muted: #9696a2;
+    --adm-gold: #d6a44f;
+    --adm-gold-soft: #302719;
+    --adm-hover: #202025;
+    --adm-ok-bg: #183c2c;
+    --adm-ok-text: #9ce5bb;
+    --adm-erro-bg: #442327;
+    --adm-erro-text: #ffb5bb;
+    /* nomes usados por telas antigas (Chamados, Mensagens) */
+    --panel: var(--adm-card-bg);
+    --border: var(--adm-border);
+    --input-bg: var(--adm-card-2);
+    --text: var(--adm-text);
+    --muted: var(--adm-muted);
+}
+
+:root[data-tema="claro"] .adm-layout {
+    --adm-bg: #f3f4f7;
+    --adm-side: #ffffff;
+    --adm-card-bg: #ffffff;
+    --adm-card-2: #f2f4f7;
+    --adm-border: #e1e4ea;
+    --adm-text: #1f2128;
+    --adm-muted: #667085;
+    --adm-gold: #a9741c;
+    --adm-gold-soft: #f9eed6;
+    --adm-hover: #f1f3f6;
+    --adm-ok-bg: #e2f5ea;
+    --adm-ok-text: #1b6a3e;
+    --adm-erro-bg: #fde9eb;
+    --adm-erro-text: #a3262f;
+}
+
+.adm-layout {
+    min-height: 100vh;
+    background: var(--adm-bg);
+    color: var(--adm-text);
+}
+
+/* menu lateral sempre da altura da tela, mesmo em páginas curtas ou longas */
+@media (min-width: 851px) {
+    .adm-sidebar {
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        min-height: 0;
+        align-self: flex-start;
+        overflow-y: auto;
+    }
+}
+
+.adm-sidebar {
+    background: var(--adm-side);
+    border-right-color: var(--adm-border);
+}
+
+.adm-sidebar-topo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.adm-sidebar .botao-tema--sidebar {
+    width: 36px;
+    height: 36px;
+}
+
+.adm-sidebar-header,
+.adm-sidebar-footer {
+    border-color: var(--adm-border);
+}
+
+.adm-sidebar-header small,
+.adm-nav-label,
+.adm-sidebar-footer small {
+    color: var(--adm-muted);
+}
+
+.adm-brand svg,
+.adm-brand span,
+.adm-gold,
+.adm-eyebrow,
+.adm-time,
+.adm-text-button,
+.adm-kpi-top svg,
+.adm-team-card button,
+.adm-rating,
+.adm-settings-grid svg {
+    color: var(--adm-gold);
+}
+
+.adm-nav-item {
+    color: var(--adm-muted);
+}
+
+.adm-nav-item:hover {
+    background: var(--adm-hover);
+    color: var(--adm-text);
+}
+
+.adm-nav-item.active {
+    background: var(--adm-gold-soft);
+    color: var(--adm-gold);
+}
+
+.adm-admin-avatar,
+.adm-avatar {
+    background: var(--adm-gold-soft);
+    color: var(--adm-gold);
+}
+
+.adm-page-top p,
+.adm-muted,
+.adm-kpi-top,
+.adm-kpi small,
+.adm-card-head p,
+.adm-agenda-item small,
+.adm-barber-info small,
+.adm-summary-line,
+.adm-team-card small,
+.adm-vazio,
+.adm-settings-grid span,
+.adm-form-grid label,
+.adm-field {
+    color: var(--adm-muted);
+}
+
+.adm-kpi,
+.adm-card,
+.adm-team-card,
+.adm-settings-grid button,
+.adm-select-barber {
+    background: var(--adm-card-bg);
+    border-color: var(--adm-border);
+    color: var(--adm-text);
+}
+
+.adm-kpi--gold {
+    background: linear-gradient(135deg, var(--adm-gold-soft), var(--adm-card-bg));
+    border-color: var(--adm-gold);
+}
+
+.adm-kpi strong,
+.adm-card h3,
+.adm-summary-line strong {
+    color: var(--adm-text);
+}
+
+.adm-agenda-item,
+.adm-barber-row,
+.adm-summary-line {
+    border-bottom-color: var(--adm-border);
+}
+
+.adm-status {
+    background: var(--adm-card-2);
+    color: var(--adm-muted);
+}
+
+.adm-btn--outline {
+    background: var(--adm-card-2);
+    border-color: var(--adm-border);
+    color: var(--adm-text);
+}
+
+.adm-btn--outline:hover {
+    background: var(--adm-hover);
+    border-color: var(--adm-gold);
+}
+
+:root[data-tema="claro"] .adm-btn--danger {
+    background: #fde9eb;
+    color: #a3262f;
+    border-color: #f3b9be;
+}
+
+.adm-form-grid input,
+.adm-field input,
+.adm-date {
+    background: var(--adm-card-2);
+    border-color: var(--adm-border);
+    color: var(--adm-text);
+}
+
+.adm-service-chip,
+.adm-horario {
+    background: var(--adm-gold-soft);
+    border-color: var(--adm-border);
+    color: var(--adm-text);
+}
+
+.adm-aviso--ok {
+    background: var(--adm-ok-bg);
+    color: var(--adm-ok-text);
+}
+
+.adm-aviso--erro {
+    background: var(--adm-erro-bg);
+    color: var(--adm-erro-text);
+}
+
+.adm-logout {
+    color: var(--adm-erro-text);
+    border-color: var(--adm-border);
+}
+
+:root[data-tema="claro"] .adm-logout:hover {
+    background: #fde9eb;
+    color: #a3262f;
+}
+
+.adm-mobile-menu {
+    background: var(--adm-card-2);
+    color: var(--adm-text);
+    border-color: var(--adm-border);
+}
+
+/* o Theme.css antigo pintava a lateral/principal por conta própria: aqui mandam as variáveis acima */
+:root[data-tema="claro"] .adm-layout .adm-main,
+:root[data-tema="claro"] .adm-layout .adm-sidebar {
+    background: transparent;
+}
+
+:root[data-tema="claro"] .adm-layout .adm-sidebar {
+    background: var(--adm-side);
+}
+
+/* selo de prioridade dos chamados */
+.chamados-prioridade {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 5px 10px;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.chamados-prioridade--alta {
+    background: rgba(229, 72, 77, .14);
+    color: #e5484d;
+}
+
+.chamados-prioridade--media {
+    background: rgba(214, 164, 71, .16);
+    color: var(--adm-gold);
+}
+
+.chamados-prioridade--baixa {
+    background: rgba(128, 128, 128, .14);
+    color: var(--adm-muted);
+}

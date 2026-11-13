@@ -45,3 +45,20 @@ gemini:
 logging:
   level:
     dev.langchain4j.service.ToolErrorHandlingNotice: "OFF"
+
+pix:
+  chave: ${PIX_CHAVE}
+  recebedor: ${PIX_RECEBEDOR}
+  cidade: ${PIX_CIDADE}
+
+barbearia:
+  google:
+    avaliacao-url: ${GOOGLE_AVALIACAO_URL}
+
+
+mercadopago:
+  access-token: ${MERCADOPAGO_ACCESS_TOKEN}
+  webhook-url: ${MERCADOPAGO_WEBHOOK_URL}
+  webhook-secret: ${MERCADOPAGO_WEBHOOK_SECRET}
+
+

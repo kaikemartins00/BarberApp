@@ -13,7 +13,7 @@ import java.util.Set;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "barbeiros")
+@Table(name = "barbeiros_tb")
 public class BarbeiroEntity {
 
     @Id
@@ -30,8 +30,15 @@ public class BarbeiroEntity {
     @Column(nullable = false)
     private String telefone;
 
-    @Column(name = "foto_url")
+    @Column(name = "foto_url", columnDefinition = "TEXT")
     private String fotoUrl;
+
+    // preenchido quando o barbeiro é desligado (null = em atividade); o histórico continua no banco
+    @Column(name = "desligado_em")
+    private LocalDateTime desligadoEm;
+
+    @Column(name = "motivo_desligamento", columnDefinition = "TEXT")
+    private String motivoDesligamento;
 
     @ManyToMany
     @JoinTable(

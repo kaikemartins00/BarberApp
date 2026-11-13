@@ -2,6 +2,7 @@ package com.kaikeMartins.barberapp_backend.controller;
 
 import com.kaikeMartins.barberapp_backend.dto.ConversaRequest;
 import com.kaikeMartins.barberapp_backend.dto.ConversaResponse;
+import com.kaikeMartins.barberapp_backend.dto.ClienteConversaResponse;
 import com.kaikeMartins.barberapp_backend.dto.MensagemRequest;
 import com.kaikeMartins.barberapp_backend.dto.MensagemResponse;
 import com.kaikeMartins.barberapp_backend.service.ConversaService;
@@ -26,9 +27,15 @@ public class ConversaController {
         return service.minhasConversas();
     }
 
+    @GetMapping("/clientes-disponiveis")
+    @PreAuthorize("hasRole('BARBEIRO')")
+    public List<ClienteConversaResponse> clientesDisponiveis() {
+        return service.clientesDisponiveis();
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('CLIENTE')")
+    @PreAuthorize("hasAnyRole('CLIENTE', 'BARBEIRO')")
     public ConversaResponse iniciar(@Valid @RequestBody ConversaRequest request) {
         return service.iniciar(request);
     }

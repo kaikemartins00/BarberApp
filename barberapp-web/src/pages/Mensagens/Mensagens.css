@@ -1,0 +1,90 @@
+
+.mensagens-profissional {
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 4px 24px
+}
+
+.mensagens-profissional .page__head {
+    margin: 0 0 24px
+}
+
+.mensagens-profissional .msgs {
+    display: grid;
+    grid-template-columns:minmax(240px, 320px) minmax(0, 1fr);
+    gap: 18px;
+    align-items: stretch;
+    min-height: 620px
+}
+
+.mensagens-profissional .msgs__lista, .mensagens-profissional .msgs__chat {
+    min-width: 0;
+    border-radius: 14px;
+    border: 1px solid var(--adm-border, #303038);
+    background: var(--adm-card-bg, #17171d);
+    padding: 20px
+}
+
+.mensagens-profissional .msgs__lista {
+    overflow-y: auto;
+    max-height: 75vh
+}
+
+.mensagens-profissional .msgs__chat {
+    display: flex;
+    flex-direction: column;
+    min-height: 620px;
+    max-height: 75vh
+}
+
+.mensagens-profissional .msgs__item {
+    width: 100%;
+    text-align: left;
+    border-radius: 10px;
+    padding: 14px;
+    margin: 6px 0;
+    cursor: pointer
+}
+
+.mensagens-profissional .msgs__item--on {
+    outline: 1px solid #d6a447;
+    background: rgba(214, 164, 71, .10)
+}
+
+.mensagens-profissional .msgs__corpo {
+    flex: 1;
+    min-height: 240px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 18px 0
+}
+
+.mensagens-profissional .msgs__form {
+    display: flex;
+    gap: 10px;
+    margin-top: auto
+}
+
+.mensagens-profissional .msgs__form textarea {
+    flex: 1;
+    min-width: 0;
+    resize: vertical
+}
+
+.mensagens-profissional .balao {
+    max-width: 80%;
+    overflow-wrap: anywhere
+}
+
+@media (max-width: 850px) {
+    .mensagens-profissional .msgs {
+        grid-template-columns:1fr
+    }
+
+    .mensagens-profissional .msgs__chat {
+        min-height: 460px
+    }
+}

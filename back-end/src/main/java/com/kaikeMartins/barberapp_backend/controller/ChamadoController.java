@@ -43,6 +43,10 @@ public class ChamadoController {
         return service.responder(id, request);
     }
 
+    @PostMapping("/{id}/reembolsar")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ChamadoResponse reembolsar(@PathVariable Long id) { return service.reembolsar(id); }
+
     @PutMapping("/{id}/finalizar")
     @PreAuthorize("hasAnyRole('BARBEIRO', 'ADMIN')")
     public ChamadoResponse finalizar(@PathVariable Long id) { return service.finalizar(id); }

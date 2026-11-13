@@ -26,7 +26,7 @@ public class BarbeiroController {
     public BarbeiroResponse findById(@PathVariable Long id) { return service.findById(id); }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'BARBEIRO')")
     public BarbeiroResponse update(@PathVariable Long id, @Valid @RequestBody BarbeiroUpdateRequest request) {
         return service.update(id, request);
     }
@@ -47,6 +47,16 @@ public class BarbeiroController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasRole('ADMIN')")
     public void delete(@PathVariable Long id) { service.delete(id); }
+
+    @GetMapping("/desligados")
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<BarbeiroDesligadoResponse> desligados() { return service.listarDesligados(); }
+
+    @PostMapping("/{id}/desligar")
+    @PreAuthorize("hasRole('ADMIN')")
+    public CancelamentoResponse desligar(@PathVariable Long id, @Valid @RequestBody DesligarBarbeiroRequest request) {
+        return service.desligar(id, request);
+    }
 
     @PostMapping("/{id}/cancelar-dia")
     @PreAuthorize("hasRole('ADMIN')")
