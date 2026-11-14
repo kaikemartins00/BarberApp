@@ -40,6 +40,9 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 public class BarbeiroServiceTest {
 
+    @Mock
+    private PagamentoService pagamentoService;
+
     @InjectMocks
     private BarbeiroService barbeiroService;
 

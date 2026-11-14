@@ -70,7 +70,7 @@ class ChamadoRepositoryTest {
         em.flush();
 
         em.getEntityManager()
-                .createNativeQuery("update chamados set chamado_date = :data where id = :id")
+                .createNativeQuery("update chamados_tb set chamado_date = :data where id = :id")
                 .setParameter("data", data)
                 .setParameter("id", chamado.getId())
                 .executeUpdate();

@@ -66,7 +66,7 @@ class AuthControllerTest {
         mockMvc = MockMvcBuilders.standaloneSetup(controller).alwaysDo(print()).build();
         url = "/auth";
         barbeiroRequest = new BarbeiroRequest("Joao", "joao@email.com", "Ee123456", "79988888888", null);
-        cadastroRequest = new CadastroRequest("Kaike", "kaike@email.com", "Ee123456", "79999999999");
+        cadastroRequest = new CadastroRequest("Kaike", "kaike@email.com", "Ee123456", true, "1.0");
         loginRequest = new LoginRequest("kaike@email.com", "Ee123456");
         validarCodigoRequest = new ValidarCodigoRequest("kaike@email.com", "123456");
         tokenResponse = new TokenResponse("jwt-token", 3600000L, 1L, List.of("ROLE_CLIENTE"));
@@ -146,7 +146,7 @@ class AuthControllerTest {
     @DisplayName("POST /auth/cadastro com campos inválidos deve retornar 400")
     void register_camposInvalidos_deveRetornar400() throws Exception {
 
-        CadastroRequest invalido = new CadastroRequest("", "emailinvalido", "", "");
+        CadastroRequest invalido = new CadastroRequest("", "emailinvalido", "", false, null);
         String jsonInvalido = objectMapper.writeValueAsString(invalido);
 
         ResultActions result = mockMvc.perform(post(url + "/cadastro")

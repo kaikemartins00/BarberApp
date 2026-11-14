@@ -1,0 +1,45 @@
+spring:
+  application:
+    name: barberapp-backend-test
+  datasource:
+    url: jdbc:h2:mem:barberapp;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  jwt:
+    expiration: 86400000
+    key: chave-secreta-de-teste-com-mais-de-32-bytes-0123456789
+  mail:
+    host: localhost
+    port: 2525
+    username: teste@email.com
+    password: senha-de-teste
+
+admin:
+  email: admin@email.com
+  senha: Admin123
+  nome: Admin
+
+gemini:
+  api_key: chave-de-teste
+  url: http://localhost:9999
+
+pix:
+  chave: chave@email.com
+  recebedor: Barbearia Teste
+  cidade: Aracaju
+
+barbearia:
+  google:
+    avaliacao-url: http://localhost/avaliacao
+
+mercadopago:
+  access-token: token-de-teste
+  webhook-url: http://localhost/webhooks/mercadopago
+  webhook-secret: segredo-de-teste

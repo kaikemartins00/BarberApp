@@ -60,13 +60,13 @@ class ChamadoControllerTest {
     void setUp() throws JsonProcessingException {
         mockMvc = MockMvcBuilders.standaloneSetup(controller).alwaysDo(print()).build();
         url = "/chamados";
-        chamadoRequest = new ChamadoRequest("Duvida", "Como agendar?");
+        chamadoRequest = new ChamadoRequest("Duvida", "Como agendar?", null);
         respostaRequest = new RespostaChamRequest("Vou verificar");
 
         RespostaChamResponse resposta = new RespostaChamResponse(1L, "Vou verificar", LocalDateTime.now(), "Joao");
         chamadoResponse = new ChamadoResponse(7L, "Duvida", "Como agendar?", LocalDateTime.now(),
                 ChamadoStatus.EM_ANDAMENTO, PrioridadeChamado.BAIXA, "Kaike", "kaike@email.com",
-                "Joao", true, List.of(resposta));
+                "Joao", true, List.of(resposta), null, false);
 
         jsonChamado = objectMapper.writeValueAsString(chamadoRequest);
         jsonResposta = objectMapper.writeValueAsString(respostaRequest);
@@ -137,7 +137,7 @@ class ChamadoControllerTest {
     @DisplayName("POST /chamados com título e descrição em branco deve retornar 400")
     void create_camposEmBranco_deveRetornar400() throws Exception {
 
-        ChamadoRequest emBranco = new ChamadoRequest("", " ");
+        ChamadoRequest emBranco = new ChamadoRequest("", " ", null);
         String jsonEmBranco = objectMapper.writeValueAsString(emBranco);
 
         ResultActions result = mockMvc.perform(post(url)

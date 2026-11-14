@@ -14,6 +14,8 @@ import com.kaikeMartins.barberapp_backend.repository.ChamadoRepository;
 import com.kaikeMartins.barberapp_backend.repository.ClienteRepository;
 import com.kaikeMartins.barberapp_backend.repository.RespostaRepository;
 import org.junit.jupiter.api.AfterEach;
+import org.springframework.context.ApplicationEventPublisher;
+import com.kaikeMartins.barberapp_backend.repository.AgendamentoRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -40,6 +42,15 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class ChamadoServiceTest {
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
+    @Mock
+    private AgendamentoRepository agendamentoRepository;
+
+    @Mock
+    private PagamentoService pagamentoService;
 
     @InjectMocks
     private ChamadoService chamadoService;
@@ -245,7 +256,7 @@ public class ChamadoServiceTest {
         when(clienteRepository.findById(1L)).thenReturn(Optional.of(cliente));
         when(chamadoRepository.save(any(ChamadoEntity.class))).thenReturn(chamadoAberto);
 
-        ChamadoResponse response = chamadoService.create(new ChamadoRequest("Duvida", "Como agendar?"));
+        ChamadoResponse response = chamadoService.create(new ChamadoRequest("Duvida", "Como agendar?", null));
 
         ArgumentCaptor<ChamadoEntity> captor = ArgumentCaptor.forClass(ChamadoEntity.class);
         verify(chamadoRepository).save(captor.capture());
@@ -259,13 +270,13 @@ public class ChamadoServiceTest {
     }
 
     @Test
-    @DisplayName("Deve definir prioridade ALTA quando o título menciona servidor")
+    @DisplayName("Deve definir prioridade ALTA para o assunto de erro no pagamento ou Pix")
     void createHighPriorityServerSuccess() {
         autenticar(usuarioCliente);
         when(clienteRepository.findById(1L)).thenReturn(Optional.of(cliente));
         when(chamadoRepository.save(any(ChamadoEntity.class))).thenReturn(chamadoAberto);
 
-        chamadoService.create(new ChamadoRequest("O Servidor caiu", "ajuda"));
+        chamadoService.create(new ChamadoRequest("Erro no pagamento ou Pix", "ajuda", null));
 
         ArgumentCaptor<ChamadoEntity> captor = ArgumentCaptor.forClass(ChamadoEntity.class);
         verify(chamadoRepository).save(captor.capture());
@@ -274,13 +285,13 @@ public class ChamadoServiceTest {
     }
 
     @Test
-    @DisplayName("Deve definir prioridade ALTA quando a descrição menciona sistema fora")
+    @DisplayName("Deve somar o sinal de texto e chegar em ALTA no assunto de site fora do ar")
     void createHighPrioritySystemDownSuccess() {
         autenticar(usuarioCliente);
         when(clienteRepository.findById(1L)).thenReturn(Optional.of(cliente));
         when(chamadoRepository.save(any(ChamadoEntity.class))).thenReturn(chamadoAberto);
 
-        chamadoService.create(new ChamadoRequest("Problema", "O sistema fora do ar"));
+        chamadoService.create(new ChamadoRequest("Site fora do ar ou muito lento", "ajuda", null));
 
         ArgumentCaptor<ChamadoEntity> captor = ArgumentCaptor.forClass(ChamadoEntity.class);
         verify(chamadoRepository).save(captor.capture());
@@ -289,13 +300,13 @@ public class ChamadoServiceTest {
     }
 
     @Test
-    @DisplayName("Deve definir prioridade MEDIA quando o texto menciona lento")
+    @DisplayName("Deve definir prioridade MEDIA para o assunto não consegui agendar")
     void createMediumPrioritySlowSuccess() {
         autenticar(usuarioCliente);
         when(clienteRepository.findById(1L)).thenReturn(Optional.of(cliente));
         when(chamadoRepository.save(any(ChamadoEntity.class))).thenReturn(chamadoAberto);
 
-        chamadoService.create(new ChamadoRequest("App lento", "ajuda"));
+        chamadoService.create(new ChamadoRequest("Não consegui agendar", "ajuda", null));
 
         ArgumentCaptor<ChamadoEntity> captor = ArgumentCaptor.forClass(ChamadoEntity.class);
         verify(chamadoRepository).save(captor.capture());
@@ -304,13 +315,13 @@ public class ChamadoServiceTest {
     }
 
     @Test
-    @DisplayName("Deve definir prioridade MEDIA quando o texto menciona bug")
+    @DisplayName("Deve definir prioridade MEDIA quando erro no site tem sinal de servidor")
     void createMediumPriorityBugSuccess() {
         autenticar(usuarioCliente);
         when(clienteRepository.findById(1L)).thenReturn(Optional.of(cliente));
         when(chamadoRepository.save(any(ChamadoEntity.class))).thenReturn(chamadoAberto);
 
-        chamadoService.create(new ChamadoRequest("Problema", "Encontrei um BUG na tela"));
+        chamadoService.create(new ChamadoRequest("Erro no site", "o servidor travou", null));
 
         ArgumentCaptor<ChamadoEntity> captor = ArgumentCaptor.forClass(ChamadoEntity.class);
         verify(chamadoRepository).save(captor.capture());
@@ -319,18 +330,18 @@ public class ChamadoServiceTest {
     }
 
     @Test
-    @DisplayName("Deve priorizar ALTA quando o texto menciona servidor e bug")
+    @DisplayName("Deve definir prioridade BAIXA para assunto livre mesmo com palavra de sinal")
     void createHighPriorityOverMediumSuccess() {
         autenticar(usuarioCliente);
         when(clienteRepository.findById(1L)).thenReturn(Optional.of(cliente));
         when(chamadoRepository.save(any(ChamadoEntity.class))).thenReturn(chamadoAberto);
 
-        chamadoService.create(new ChamadoRequest("Bug no servidor", "ajuda"));
+        chamadoService.create(new ChamadoRequest("O Servidor caiu", "ajuda", null));
 
         ArgumentCaptor<ChamadoEntity> captor = ArgumentCaptor.forClass(ChamadoEntity.class);
         verify(chamadoRepository).save(captor.capture());
 
-        assertEquals(PrioridadeChamado.ALTA, captor.getValue().getPrioridade());
+        assertEquals(PrioridadeChamado.BAIXA, captor.getValue().getPrioridade());
     }
 
     @Test
@@ -339,7 +350,7 @@ public class ChamadoServiceTest {
         autenticar(usuarioBarbeiro);
         when(clienteRepository.findById(2L)).thenReturn(Optional.empty());
 
-        assertThrows(ForbiddenException.class, () -> chamadoService.create(new ChamadoRequest("t", "d")));
+        assertThrows(ForbiddenException.class, () -> chamadoService.create(new ChamadoRequest("t", "d", null)));
 
         verify(chamadoRepository, never()).save(any());
     }

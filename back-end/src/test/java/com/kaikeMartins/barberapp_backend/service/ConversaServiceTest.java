@@ -1,6 +1,7 @@
 package com.kaikeMartins.barberapp_backend.service;
 
 import com.kaikeMartins.barberapp_backend.domain.entities.*;
+import com.kaikeMartins.barberapp_backend.domain.enums.AgendamentoStatus;
 import com.kaikeMartins.barberapp_backend.dto.ConversaRequest;
 import com.kaikeMartins.barberapp_backend.dto.ConversaResponse;
 import com.kaikeMartins.barberapp_backend.dto.MensagemRequest;
@@ -13,6 +14,7 @@ import com.kaikeMartins.barberapp_backend.repository.ClienteRepository;
 import com.kaikeMartins.barberapp_backend.repository.ConversaRepository;
 import com.kaikeMartins.barberapp_backend.repository.MensagemRepository;
 import org.junit.jupiter.api.AfterEach;
+import com.kaikeMartins.barberapp_backend.repository.AgendamentoRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -38,6 +40,9 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class ConversaServiceTest {
+
+    @Mock
+    private AgendamentoRepository agendamentoRepository;
 
     @InjectMocks
     private ConversaService conversaService;
@@ -101,6 +106,10 @@ public class ConversaServiceTest {
     private void autenticar(UsuarioEntity usuario) {
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(usuario, null, List.of()));
+    }
+
+    private AgendamentoEntity vinculo(AgendamentoStatus status) {
+        return AgendamentoEntity.builder().cliente(cliente).barbeiro(barbeiro).status(status).build();
     }
 
     private MensagemEntity mensagem(Long id, ConversaEntity conversa, UsuarioEntity remetente, String texto,
@@ -194,16 +203,77 @@ public class ConversaServiceTest {
     }
 
     @Test
-    @DisplayName("Deve lançar ForbiddenException quando o usuário não for cliente em iniciar")
+    @DisplayName("Deve lançar ForbiddenException quando o perfil não é cliente nem barbeiro em iniciar")
     void iniciarNotClientError() {
-        autenticar(usuarioBarbeiro);
-        when(clienteRepository.findById(2L)).thenReturn(Optional.empty());
+        autenticar(usuario(3L, "ROLE_ADMIN"));
 
         ForbiddenException e = assertThrows(ForbiddenException.class,
-                () -> conversaService.iniciar(new ConversaRequest(2L)));
+                () -> conversaService.iniciar(new ConversaRequest(2L, 1L)));
 
-        assertThat(e.getMessage(), is("Apenas clientes podem iniciar conversas."));
+        assertThat(e.getMessage(), is("Perfil sem permissão para iniciar conversas."));
         verify(conversaRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Deve lançar BadRequestException quando o cliente não informa o barbeiro")
+    void iniciarClienteSemBarbeiroError() {
+        BadRequestException e = assertThrows(BadRequestException.class,
+                () -> conversaService.iniciar(new ConversaRequest(null, null)));
+
+        assertThat(e.getMessage(), is("Informe o barbeiro."));
+    }
+
+    @Test
+    @DisplayName("Deve lançar ForbiddenException quando o cliente não tem horário com o barbeiro")
+    void iniciarClienteSemVinculoError() {
+        when(clienteRepository.findById(1L)).thenReturn(Optional.of(cliente));
+        when(barbeiroRepository.findById(2L)).thenReturn(Optional.of(barbeiro));
+        when(agendamentoRepository.findByClienteId(1L)).thenReturn(List.of(vinculo(AgendamentoStatus.CANCELADO)));
+
+        ForbiddenException e = assertThrows(ForbiddenException.class,
+                () -> conversaService.iniciar(new ConversaRequest(2L, null)));
+
+        assertThat(e.getMessage(), is("Você só pode conversar com barbeiros com quem tem horário agendado."));
+        verify(conversaRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Deve lançar BadRequestException quando o barbeiro não informa o cliente")
+    void iniciarBarbeiroSemClienteError() {
+        autenticar(usuarioBarbeiro);
+
+        BadRequestException e = assertThrows(BadRequestException.class,
+                () -> conversaService.iniciar(new ConversaRequest(null, null)));
+
+        assertThat(e.getMessage(), is("Informe o cliente."));
+    }
+
+    @Test
+    @DisplayName("Deve iniciar a conversa pelo barbeiro quando o cliente é dos seus atendimentos")
+    void iniciarPeloBarbeiroSuccess() {
+        autenticar(usuarioBarbeiro);
+        when(barbeiroRepository.findById(2L)).thenReturn(Optional.of(barbeiro));
+        when(agendamentoRepository.findByBarbeiroId(2L)).thenReturn(List.of(vinculo(AgendamentoStatus.PENDENTE)));
+        when(clienteRepository.findById(1L)).thenReturn(Optional.of(cliente));
+        when(conversaRepository.findByClienteIdAndBarbeiroId(1L, 2L)).thenReturn(Optional.of(conversa));
+
+        ConversaResponse response = conversaService.iniciar(new ConversaRequest(null, 1L));
+
+        assertEquals(10L, response.id());
+        verify(conversaRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Deve lançar ForbiddenException quando o barbeiro não atendeu o cliente")
+    void iniciarPeloBarbeiroSemVinculoError() {
+        autenticar(usuarioBarbeiro);
+        when(barbeiroRepository.findById(2L)).thenReturn(Optional.of(barbeiro));
+        when(agendamentoRepository.findByBarbeiroId(2L)).thenReturn(List.of());
+
+        ForbiddenException e = assertThrows(ForbiddenException.class,
+                () -> conversaService.iniciar(new ConversaRequest(null, 1L)));
+
+        assertThat(e.getMessage(), is("Você só pode conversar com clientes dos seus atendimentos."));
     }
 
     @Test
@@ -213,7 +283,7 @@ public class ConversaServiceTest {
         when(barbeiroRepository.findById(99L)).thenReturn(Optional.empty());
 
         NotFoundException e = assertThrows(NotFoundException.class,
-                () -> conversaService.iniciar(new ConversaRequest(99L)));
+                () -> conversaService.iniciar(new ConversaRequest(99L, null)));
 
         assertThat(e.getMessage(), is("Barbeiro não encontrado"));
         verify(conversaRepository, never()).save(any());
@@ -222,12 +292,13 @@ public class ConversaServiceTest {
     @Test
     @DisplayName("Deve criar a conversa quando ela não existir")
     void iniciarNewSuccess() {
+        when(agendamentoRepository.findByClienteId(1L)).thenReturn(List.of(vinculo(AgendamentoStatus.CONFIRMADO)));
         when(clienteRepository.findById(1L)).thenReturn(Optional.of(cliente));
         when(barbeiroRepository.findById(2L)).thenReturn(Optional.of(barbeiro));
         when(conversaRepository.findByClienteIdAndBarbeiroId(1L, 2L)).thenReturn(Optional.empty());
         when(conversaRepository.save(any(ConversaEntity.class))).thenReturn(conversa);
 
-        ConversaResponse response = conversaService.iniciar(new ConversaRequest(2L));
+        ConversaResponse response = conversaService.iniciar(new ConversaRequest(2L, null));
 
         ArgumentCaptor<ConversaEntity> captor = ArgumentCaptor.forClass(ConversaEntity.class);
         verify(conversaRepository).save(captor.capture());
@@ -241,11 +312,12 @@ public class ConversaServiceTest {
     @Test
     @DisplayName("Deve reaproveitar a conversa existente que está aberta")
     void iniciarExistingOpenSuccess() {
+        when(agendamentoRepository.findByClienteId(1L)).thenReturn(List.of(vinculo(AgendamentoStatus.CONFIRMADO)));
         when(clienteRepository.findById(1L)).thenReturn(Optional.of(cliente));
         when(barbeiroRepository.findById(2L)).thenReturn(Optional.of(barbeiro));
         when(conversaRepository.findByClienteIdAndBarbeiroId(1L, 2L)).thenReturn(Optional.of(conversa));
 
-        ConversaResponse response = conversaService.iniciar(new ConversaRequest(2L));
+        ConversaResponse response = conversaService.iniciar(new ConversaRequest(2L, null));
 
         assertEquals(10L, response.id());
         assertFalse(response.encerrada());
@@ -255,11 +327,12 @@ public class ConversaServiceTest {
     @Test
     @DisplayName("Deve reaproveitar e reabrir uma conversa encerrada")
     void iniciarReopensExistingSuccess() {
+        when(agendamentoRepository.findByClienteId(1L)).thenReturn(List.of(vinculo(AgendamentoStatus.CONFIRMADO)));
         when(clienteRepository.findById(1L)).thenReturn(Optional.of(cliente));
         when(barbeiroRepository.findById(2L)).thenReturn(Optional.of(barbeiro));
         when(conversaRepository.findByClienteIdAndBarbeiroId(1L, 2L)).thenReturn(Optional.of(conversaEncerrada));
 
-        ConversaResponse response = conversaService.iniciar(new ConversaRequest(2L));
+        ConversaResponse response = conversaService.iniciar(new ConversaRequest(2L, null));
 
         assertEquals(11L, response.id());
         assertFalse(conversaEncerrada.isEncerrada());

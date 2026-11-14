@@ -2,14 +2,20 @@ package com.kaikeMartins.barberapp_backend.service;
 
 import com.kaikeMartins.barberapp_backend.domain.entities.*;
 import com.kaikeMartins.barberapp_backend.domain.enums.AgendamentoStatus;
+import com.kaikeMartins.barberapp_backend.domain.enums.PagamentoMetodo;
+import com.kaikeMartins.barberapp_backend.domain.enums.PagamentoStatus;
 import com.kaikeMartins.barberapp_backend.dto.AgendamentoRequest;
 import com.kaikeMartins.barberapp_backend.dto.AgendamentoResponse;
+import com.kaikeMartins.barberapp_backend.dto.ResumoCancelamentosResponse;
+import com.kaikeMartins.barberapp_backend.event.AvaliacaoSolicitadaEvent;
+import com.kaikeMartins.barberapp_backend.event.ComprovanteCancelamentoEvent;
 import com.kaikeMartins.barberapp_backend.exception.BadRequestException;
 import com.kaikeMartins.barberapp_backend.exception.ForbiddenException;
 import com.kaikeMartins.barberapp_backend.exception.NotFoundException;
 import com.kaikeMartins.barberapp_backend.repository.AgendamentoRepository;
 import com.kaikeMartins.barberapp_backend.repository.BarbeiroRepository;
 import com.kaikeMartins.barberapp_backend.repository.ClienteRepository;
+import com.kaikeMartins.barberapp_backend.repository.PagamentoRepository;
 import com.kaikeMartins.barberapp_backend.repository.ServicoRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,12 +26,14 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -55,6 +63,21 @@ public class AgendamentoServiceTest {
     @Mock
     private ClienteRepository clienteRepository;
 
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
+    @Mock
+    private PagamentoService pagamentoService;
+
+    @Mock
+    private PagamentoRepository pagamentoRepository;
+
+    @Mock
+    private AtendimentoServicoService atendimentoServicoService;
+
+    @Mock
+    private FilaEsperaService filaEsperaService;
+
     private UsuarioEntity usuarioCliente;
 
     private UsuarioEntity usuarioBarbeiro;
@@ -68,6 +91,8 @@ public class AgendamentoServiceTest {
     private AgendamentoEntity agendamento;
 
     private AgendamentoRequest request;
+
+    private static final ZoneId FUSO = ZoneId.of("America/Sao_Paulo");
 
     private LocalDate amanha;
 
@@ -229,7 +254,7 @@ public class AgendamentoServiceTest {
 
         NotFoundException e = assertThrows(NotFoundException.class, () -> agendamentoService.create(request));
 
-        assertThat(e.getMessage(), is("Barbeiro não encontrado"));
+        assertThat(e.getMessage(), is("Barbeiro não encontrado."));
         verify(repository, never()).save(any());
     }
 
@@ -242,7 +267,7 @@ public class AgendamentoServiceTest {
 
         NotFoundException e = assertThrows(NotFoundException.class, () -> agendamentoService.create(request));
 
-        assertThat(e.getMessage(), is("Serviço não encontrado"));
+        assertThat(e.getMessage(), is("Serviço não encontrado."));
         verify(repository, never()).save(any());
     }
 
@@ -294,13 +319,11 @@ public class AgendamentoServiceTest {
         LocalDate ontem = LocalDate.now().minusDays(1);
         barbeiro.getHorariosTrabalho().add(LocalDateTime.of(ontem, hora));
         when(clienteRepository.findById(1L)).thenReturn(Optional.of(cliente));
-        when(barbeiroRepository.findById(2L)).thenReturn(Optional.of(barbeiro));
-        when(servicoRepository.findById(3L)).thenReturn(Optional.of(servico));
 
         BadRequestException e = assertThrows(BadRequestException.class,
                 () -> agendamentoService.create(new AgendamentoRequest(2L, 3L, ontem, hora)));
 
-        assertThat(e.getMessage(), is("Esse horário já passou."));
+        assertThat(e.getMessage(), is("Não é possível agendar um horário que já passou."));
         verify(repository, never()).save(any());
     }
 
@@ -406,7 +429,7 @@ public class AgendamentoServiceTest {
         NotFoundException e = assertThrows(NotFoundException.class,
                 () -> agendamentoService.horariosLivres(99L, amanha));
 
-        assertThat(e.getMessage(), is("Barbeiro não encontrado"));
+        assertThat(e.getMessage(), is("Barbeiro não encontrado."));
         verifyNoInteractions(repository);
     }
 
@@ -415,6 +438,11 @@ public class AgendamentoServiceTest {
     void meusAgendamentosSuccess() {
         when(clienteRepository.findById(1L)).thenReturn(Optional.of(cliente));
         when(repository.findByClienteId(1L)).thenReturn(List.of(agendamento));
+        when(pagamentoRepository.findByAgendamentoId(agendamento.getId())).thenReturn(Optional.of(
+                PagamentoEntity.builder()
+                        .metodo(PagamentoMetodo.PRESENCIAL)
+                        .status(PagamentoStatus.PENDENTE)
+                        .build()));
 
         List<AgendamentoResponse> lista = agendamentoService.meusAgendamentos();
 
@@ -503,8 +531,8 @@ public class AgendamentoServiceTest {
         NotFoundException e = assertThrows(NotFoundException.class,
                 () -> agendamentoService.atualizarStatus(99L, AgendamentoStatus.CONFIRMADO));
 
-        assertThat(e.getMessage(), is("Agendamento não encontrado"));
-        verify(repository, never()).save(any());
+        assertThat(e.getMessage(), is("Agendamento não encontrado."));
+        verify(repository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -516,8 +544,8 @@ public class AgendamentoServiceTest {
         BadRequestException e = assertThrows(BadRequestException.class,
                 () -> agendamentoService.atualizarStatus(10L, AgendamentoStatus.CONFIRMADO));
 
-        assertThat(e.getMessage(), is("Esse agendamento já foi cancelado."));
-        verify(repository, never()).save(any());
+        assertThat(e.getMessage(), is("Esse agendamento já foi finalizado ou cancelado."));
+        verify(repository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -529,7 +557,7 @@ public class AgendamentoServiceTest {
         assertThrows(ForbiddenException.class,
                 () -> agendamentoService.atualizarStatus(10L, AgendamentoStatus.CANCELADO));
 
-        verify(repository, never()).save(any());
+        verify(repository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -537,27 +565,30 @@ public class AgendamentoServiceTest {
     void atualizarStatusBarbeiroSuccess() {
         autenticar(usuarioBarbeiro);
         when(repository.findById(10L)).thenReturn(Optional.of(agendamento));
-        when(repository.save(any(AgendamentoEntity.class))).thenReturn(agendamento);
+        when(repository.saveAndFlush(any(AgendamentoEntity.class))).thenReturn(agendamento);
 
         AgendamentoResponse response = agendamentoService.atualizarStatus(10L, AgendamentoStatus.CONFIRMADO);
 
         assertEquals("CONFIRMADO", response.status());
         assertEquals(AgendamentoStatus.CONFIRMADO, agendamento.getStatus());
-        verify(repository).save(agendamento);
+        verify(pagamentoService, never()).reembolsarPorCancelamento(any());
     }
 
     @Test
-    @DisplayName("Deve permitir que o barbeiro dono cancele o agendamento")
+    @DisplayName("Deve reembolsar e avisar a fila quando o barbeiro dono cancela")
     void atualizarStatusBarbeiroCancelSuccess() {
         autenticar(usuarioBarbeiro);
         when(repository.findById(10L)).thenReturn(Optional.of(agendamento));
-        when(repository.save(any(AgendamentoEntity.class))).thenReturn(agendamento);
+        when(repository.saveAndFlush(any(AgendamentoEntity.class))).thenReturn(agendamento);
 
         AgendamentoResponse response = agendamentoService.atualizarStatus(10L, AgendamentoStatus.CANCELADO);
 
         assertEquals("CANCELADO", response.status());
         assertEquals(AgendamentoStatus.CANCELADO, agendamento.getStatus());
-        verify(repository).save(agendamento);
+        assertFalse(agendamento.getCanceladoPeloCliente());
+        verify(filaEsperaService).processarCancelamento(agendamento);
+        verify(pagamentoService).reembolsarPorCancelamento(agendamento);
+        verify(eventPublisher).publishEvent(any(ComprovanteCancelamentoEvent.class));
     }
 
     @Test
@@ -571,7 +602,7 @@ public class AgendamentoServiceTest {
 
         assertThat(e.getMessage(), is("Esse agendamento é de outro barbeiro."));
         assertEquals(AgendamentoStatus.PENDENTE, agendamento.getStatus());
-        verify(repository, never()).save(any());
+        verify(repository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -579,38 +610,97 @@ public class AgendamentoServiceTest {
     void atualizarStatusAdminSuccess() {
         autenticar(usuarioComRole(5L, "ROLE_ADMIN"));
         when(repository.findById(10L)).thenReturn(Optional.of(agendamento));
-        when(repository.save(any(AgendamentoEntity.class))).thenReturn(agendamento);
+        when(repository.saveAndFlush(any(AgendamentoEntity.class))).thenReturn(agendamento);
 
         AgendamentoResponse response = agendamentoService.atualizarStatus(10L, AgendamentoStatus.CONFIRMADO);
 
         assertEquals("CONFIRMADO", response.status());
-        verify(repository).save(agendamento);
     }
 
     @Test
-    @DisplayName("Deve permitir que o administrador cancele qualquer agendamento")
+    @DisplayName("Deve permitir que o administrador cancele qualquer agendamento com reembolso")
     void atualizarStatusAdminCancelSuccess() {
         autenticar(usuarioComRole(5L, "ROLE_ADMIN"));
         when(repository.findById(10L)).thenReturn(Optional.of(agendamento));
-        when(repository.save(any(AgendamentoEntity.class))).thenReturn(agendamento);
+        when(repository.saveAndFlush(any(AgendamentoEntity.class))).thenReturn(agendamento);
 
         AgendamentoResponse response = agendamentoService.atualizarStatus(10L, AgendamentoStatus.CANCELADO);
 
         assertEquals("CANCELADO", response.status());
-        verify(repository).save(agendamento);
+        verify(pagamentoService).reembolsarPorCancelamento(agendamento);
     }
 
     @Test
-    @DisplayName("Deve permitir que o cliente cancele o próprio agendamento")
-    void atualizarStatusClientCancelSuccess() {
+    @DisplayName("Deve reembolsar quando o cliente cancela com mais de 2 horas de antecedência")
+    void atualizarStatusClientCancelComAntecedencia() {
         when(repository.findById(10L)).thenReturn(Optional.of(agendamento));
-        when(repository.save(any(AgendamentoEntity.class))).thenReturn(agendamento);
+        when(repository.saveAndFlush(any(AgendamentoEntity.class))).thenReturn(agendamento);
 
         AgendamentoResponse response = agendamentoService.atualizarStatus(10L, AgendamentoStatus.CANCELADO);
 
         assertEquals("CANCELADO", response.status());
+        assertTrue(agendamento.getCanceladoPeloCliente());
+        assertNotNull(agendamento.getCanceladoEm());
+        verify(pagamentoService).reembolsarPorCancelamento(agendamento);
+    }
+
+    @Test
+    @DisplayName("Não deve reembolsar quando o cliente cancela com menos de 2 horas de antecedência")
+    void atualizarStatusClientCancelSemAntecedencia() {
+        agendamento.setData(LocalDate.now(FUSO));
+        agendamento.setHorario(LocalTime.now(FUSO).plusMinutes(30));
+        when(repository.findById(10L)).thenReturn(Optional.of(agendamento));
+        when(repository.saveAndFlush(any(AgendamentoEntity.class))).thenReturn(agendamento);
+
+        agendamentoService.atualizarStatus(10L, AgendamentoStatus.CANCELADO);
+
         assertEquals(AgendamentoStatus.CANCELADO, agendamento.getStatus());
-        verify(repository).save(agendamento);
+        verify(pagamentoService, never()).reembolsarPorCancelamento(any());
+    }
+
+    @Test
+    @DisplayName("Deve bloquear o cliente por 7 dias ao chegar no terceiro cancelamento do mês")
+    void atualizarStatusClientBloqueadoNoTerceiroCancelamento() {
+        when(repository.findById(10L)).thenReturn(Optional.of(agendamento));
+        when(repository.saveAndFlush(any(AgendamentoEntity.class))).thenReturn(agendamento);
+        when(repository.countByClienteIdAndCanceladoPeloClienteTrueAndCanceladoEmBetween(eq(1L), any(), any()))
+                .thenReturn(2L, 3L, 3L);
+
+        agendamentoService.atualizarStatus(10L, AgendamentoStatus.CANCELADO);
+
+        assertNotNull(cliente.getBloqueadoAte());
+        assertTrue(cliente.getBloqueadoAte().isAfter(LocalDateTime.now(FUSO).plusDays(6)));
+        verify(clienteRepository).save(cliente);
+    }
+
+    @Test
+    @DisplayName("Não deve bloquear o cliente enquanto ele não atingiu o limite de cancelamentos")
+    void atualizarStatusClientSemBloqueioAbaixoDoLimite() {
+        when(repository.findById(10L)).thenReturn(Optional.of(agendamento));
+        when(repository.saveAndFlush(any(AgendamentoEntity.class))).thenReturn(agendamento);
+        when(repository.countByClienteIdAndCanceladoPeloClienteTrueAndCanceladoEmBetween(eq(1L), any(), any()))
+                .thenReturn(0L, 1L, 1L);
+
+        agendamentoService.atualizarStatus(10L, AgendamentoStatus.CANCELADO);
+
+        assertNull(cliente.getBloqueadoAte());
+        verify(clienteRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Deve lançar BadRequestException quando o cliente já usou o limite de cancelamentos do mês")
+    void atualizarStatusClientLimiteAtingido() {
+        when(repository.findById(10L)).thenReturn(Optional.of(agendamento));
+        when(repository.countByClienteIdAndCanceladoPeloClienteTrueAndCanceladoEmBetween(eq(1L), any(), any()))
+                .thenReturn(3L);
+
+        BadRequestException e = assertThrows(BadRequestException.class,
+                () -> agendamentoService.atualizarStatus(10L, AgendamentoStatus.CANCELADO));
+
+        assertThat(e.getMessage(), is("Você já usou os 3 cancelamentos permitidos neste mês. Entre em contato com a barbearia."));
+        assertEquals(AgendamentoStatus.PENDENTE, agendamento.getStatus());
+        verify(repository, never()).saveAndFlush(any());
+        verify(pagamentoService, never()).reembolsarPorCancelamento(any());
     }
 
     @Test
@@ -623,7 +713,7 @@ public class AgendamentoServiceTest {
 
         assertThat(e.getMessage(), is("Clientes só podem cancelar agendamentos."));
         assertEquals(AgendamentoStatus.PENDENTE, agendamento.getStatus());
-        verify(repository, never()).save(any());
+        verify(repository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -643,6 +733,131 @@ public class AgendamentoServiceTest {
 
         assertThat(e.getMessage(), is("Esse agendamento não é seu."));
         assertEquals(AgendamentoStatus.PENDENTE, agendamento.getStatus());
+        verify(repository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    @DisplayName("Deve lançar BadRequestException ao usar atualizarStatus para concluir o atendimento")
+    void atualizarStatusConcluirPeloCaminhoErrado() {
+        autenticar(usuarioBarbeiro);
+        when(repository.findById(10L)).thenReturn(Optional.of(agendamento));
+
+        BadRequestException e = assertThrows(BadRequestException.class,
+                () -> agendamentoService.atualizarStatus(10L, AgendamentoStatus.CONCLUIDO));
+
+        assertThat(e.getMessage(), is("Use o registro de comparecimento para concluir ou registrar falta."));
+    }
+
+    @Test
+    @DisplayName("Deve concluir o atendimento e pedir a avaliação ao cliente")
+    void registrarComparecimentoConcluido() {
+        autenticar(usuarioBarbeiro);
+        agendamento.setData(LocalDate.now(FUSO).minusDays(1));
+        when(repository.findById(10L)).thenReturn(Optional.of(agendamento));
+        when(repository.save(any(AgendamentoEntity.class))).thenReturn(agendamento);
+
+        AgendamentoResponse response = agendamentoService.registrarComparecimento(10L, AgendamentoStatus.CONCLUIDO);
+
+        assertEquals("CONCLUIDO", response.status());
+        verify(eventPublisher).publishEvent(any(AvaliacaoSolicitadaEvent.class));
+        verify(pagamentoService, never()).reembolsarPorFalta(any());
+    }
+
+    @Test
+    @DisplayName("Deve registrar a falta do cliente e reembolsar o Pix")
+    void registrarComparecimentoNaoCompareceu() {
+        autenticar(usuarioBarbeiro);
+        agendamento.setData(LocalDate.now(FUSO).minusDays(1));
+        when(repository.findById(10L)).thenReturn(Optional.of(agendamento));
+        when(repository.save(any(AgendamentoEntity.class))).thenReturn(agendamento);
+
+        AgendamentoResponse response = agendamentoService.registrarComparecimento(10L, AgendamentoStatus.NAO_COMPARECEU);
+
+        assertEquals("NAO_COMPARECEU", response.status());
+        verify(pagamentoService).reembolsarPorFalta(agendamento);
+        verify(eventPublisher, never()).publishEvent(any(AvaliacaoSolicitadaEvent.class));
+    }
+
+    @Test
+    @DisplayName("Deve lançar BadRequestException ao registrar comparecimento antes do horário")
+    void registrarComparecimentoAntesDoHorario() {
+        autenticar(usuarioBarbeiro);
+        when(repository.findById(10L)).thenReturn(Optional.of(agendamento));
+
+        BadRequestException e = assertThrows(BadRequestException.class,
+                () -> agendamentoService.registrarComparecimento(10L, AgendamentoStatus.CONCLUIDO));
+
+        assertThat(e.getMessage(), is("Aguarde o início do horário para registrar o comparecimento."));
         verify(repository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Deve lançar BadRequestException quando o status de comparecimento for inválido")
+    void registrarComparecimentoStatusInvalido() {
+        BadRequestException e = assertThrows(BadRequestException.class,
+                () -> agendamentoService.registrarComparecimento(10L, AgendamentoStatus.CANCELADO));
+
+        assertThat(e.getMessage(), is("Status de comparecimento inválido."));
+    }
+
+    @Test
+    @DisplayName("Deve lançar ForbiddenException quando o cliente tenta registrar comparecimento")
+    void registrarComparecimentoClienteNaoPode() {
+        ForbiddenException e = assertThrows(ForbiddenException.class,
+                () -> agendamentoService.registrarComparecimento(10L, AgendamentoStatus.CONCLUIDO));
+
+        assertThat(e.getMessage(), is("Apenas barbeiros e administradores podem registrar comparecimento."));
+    }
+
+    @Test
+    @DisplayName("Deve lançar ForbiddenException quando o barbeiro registra comparecimento de outro barbeiro")
+    void registrarComparecimentoOutroBarbeiro() {
+        autenticar(usuarioComRole(7L, "ROLE_BARBEIRO"));
+        when(repository.findById(10L)).thenReturn(Optional.of(agendamento));
+
+        ForbiddenException e = assertThrows(ForbiddenException.class,
+                () -> agendamentoService.registrarComparecimento(10L, AgendamentoStatus.CONCLUIDO));
+
+        assertThat(e.getMessage(), is("Esse agendamento pertence a outro barbeiro."));
+    }
+
+    @Test
+    @DisplayName("Deve lançar BadRequestException ao registrar comparecimento de atendimento já finalizado")
+    void registrarComparecimentoJaFinalizado() {
+        autenticar(usuarioBarbeiro);
+        agendamento.setStatus(AgendamentoStatus.CONCLUIDO);
+        when(repository.findById(10L)).thenReturn(Optional.of(agendamento));
+
+        BadRequestException e = assertThrows(BadRequestException.class,
+                () -> agendamentoService.registrarComparecimento(10L, AgendamentoStatus.NAO_COMPARECEU));
+
+        assertThat(e.getMessage(), is("Esse atendimento já foi finalizado ou cancelado."));
+    }
+
+    @Test
+    @DisplayName("Deve montar o resumo de cancelamentos do cliente com bloqueio ativo")
+    void resumoCancelamentosComBloqueio() {
+        cliente.setBloqueadoAte(LocalDateTime.now(FUSO).plusDays(3));
+        when(clienteRepository.findById(1L)).thenReturn(Optional.of(cliente));
+        when(repository.countByClienteIdAndCanceladoPeloClienteTrueAndCanceladoEmBetween(eq(1L), any(), any()))
+                .thenReturn(3L);
+
+        ResumoCancelamentosResponse resumo = agendamentoService.resumoCancelamentos();
+
+        assertEquals(3, resumo.usados());
+        assertEquals(3, resumo.limite());
+        assertNotNull(resumo.bloqueadoAte());
+    }
+
+    @Test
+    @DisplayName("Deve ignorar bloqueio já expirado no resumo de cancelamentos")
+    void resumoCancelamentosBloqueioExpirado() {
+        cliente.setBloqueadoAte(LocalDateTime.now(FUSO).minusDays(1));
+        when(clienteRepository.findById(1L)).thenReturn(Optional.of(cliente));
+
+        ResumoCancelamentosResponse resumo = agendamentoService.resumoCancelamentos();
+
+        assertEquals(0, resumo.usados());
+        assertNull(resumo.bloqueadoAte());
     }
 }

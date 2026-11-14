@@ -23,6 +23,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
@@ -60,7 +61,7 @@ class ConversaControllerTest {
     void setUp() throws JsonProcessingException {
         mockMvc = MockMvcBuilders.standaloneSetup(controller).alwaysDo(print()).build();
         url = "/conversas";
-        conversaRequest = new ConversaRequest(1L);
+        conversaRequest = new ConversaRequest(1L, null);
         conversaResponse = new ConversaResponse(1L, "kaike", "Oi, tudo bem?", LocalDateTime.now(), 1L, false);
         mensagemRequest = new MensagemRequest("Vou me atrasar um pouco, mas irei");
         mensagemResponse = new MensagemResponse(1L, "Tudo bem, estou no aguardo", LocalDateTime.now(), true, false);
@@ -113,18 +114,19 @@ class ConversaControllerTest {
     }
 
     @Test
-    @DisplayName("POST /conversas sem barbeiroId deve retornar 400")
-    void iniciar_semBarbeiroId_deveRetornar400() throws Exception {
+    @DisplayName("POST /conversas sem ids deve repassar ao service, que valida conforme o perfil")
+    void iniciar_semIds_deveRepassarAoService() throws Exception {
 
         String jsonVazio = "{}";
+        when(service.iniciar(any(ConversaRequest.class))).thenReturn(conversaResponse);
 
         ResultActions result = mockMvc.perform(post(url)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(jsonVazio));
 
-        result.andExpect(status().isBadRequest());
+        result.andExpect(status().isCreated());
 
-        verifyNoInteractions(service);
+        verify(service).iniciar(new ConversaRequest(null, null));
     }
 
     @Test

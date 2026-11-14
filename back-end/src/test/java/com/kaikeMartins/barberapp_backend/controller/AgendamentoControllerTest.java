@@ -129,10 +129,10 @@ class AgendamentoControllerTest {
     }
 
     @Test
-    @DisplayName("POST /agendamentos com data de hoje (não futura) deve retornar 400")
-    void create_dataNaoFutura_deveRetornar400() throws Exception {
+    @DisplayName("POST /agendamentos com data no passado deve retornar 400")
+    void create_dataNoPassado_deveRetornar400() throws Exception {
 
-        AgendamentoRequest hoje = new AgendamentoRequest(2L, 3L, LocalDate.now(), LocalTime.of(14, 0));
+        AgendamentoRequest hoje = new AgendamentoRequest(2L, 3L, LocalDate.now().minusDays(1), LocalTime.of(14, 0));
         String jsonHoje = objectMapper.writeValueAsString(hoje);
 
         ResultActions result = mockMvc.perform(post(url)

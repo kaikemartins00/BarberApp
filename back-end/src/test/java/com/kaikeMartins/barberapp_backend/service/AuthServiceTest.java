@@ -128,7 +128,7 @@ public class AuthServiceTest {
         usuarioRedefinicao.setTentativasRedefinicao(0);
 
         barbeiroRequest = new BarbeiroRequest("Joao", "joao@email.com", "123456", "79988888888", "http://foto.com/j.jpg");
-        cadastroRequest = new CadastroRequest("Kaike", "kaike@email.com", "123456", "79999999999");
+        cadastroRequest = new CadastroRequest("Kaike", "kaike@email.com", "123456", true, "1.0");
     }
 
     private LocalDate hoje() {
@@ -247,7 +247,9 @@ public class AuthServiceTest {
         assertEquals(1, usuario.getEmailsEnviadosHoje());
         assertEquals(hoje(), usuario.getDataContagemEmails());
         assertEquals("Kaike", clienteCaptor.getValue().getNome());
-        assertEquals("79999999999", clienteCaptor.getValue().getTelefone());
+        assertEquals("", clienteCaptor.getValue().getTelefone());
+        assertEquals("1.0", clienteCaptor.getValue().getVersaoTermos());
+        assertNotNull(clienteCaptor.getValue().getAceitouTermosEm());
         assertSame(usuario, clienteCaptor.getValue().getUsuario());
         verify(emailService).enviarCodigo("kaike@email.com", usuario.getCodigoVerificacao());
         verify(roleRepository, never()).save(any());
